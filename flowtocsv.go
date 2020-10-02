@@ -15,6 +15,7 @@ import (
 
 //Instructions is an exported struct that contains the necessary instructions to convert an MRASCO flow into a CSV file.
 //These instructions are stored as a JSON
+//When you generate instructions, you can adjust the headers (which is the columns of the output CSV) names to match the contents of that column.
 type Instructions struct {
 	Dataflow   string
 	Delimiter  string
