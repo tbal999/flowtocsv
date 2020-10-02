@@ -38,7 +38,7 @@ var (
 	prev           = 0
 	mainguideIndex = 0
 	//Testing - set this bool to 'true' if you want to test the conversion of flows step by step (in case you spot a bug or something)
-	Testing = false
+	Testing bool
 )
 
 func (in *Instructions) loadInstructions(filename string) {
