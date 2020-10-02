@@ -26,13 +26,17 @@ type Instructions struct {
 }
 
 var (
-	headerFooter  [][]string
-	output        [][]string
-	chunk         [][]string
-	replacedItems []string
-	spaceStrings  []string
-	guide         []int
-	text          = ""
+	headerFooter   [][]string
+	output         [][]string
+	chunk          [][]string
+	replacedItems  []string
+	spaceStrings   []string
+	guide          []int
+	matching       []int
+	maxno          []int
+	text           = ""
+	prev           = 0
+	mainguideIndex = 0
 )
 
 func (in *Instructions) loadInstructions(filename string) {
@@ -278,61 +282,52 @@ func (i Instructions) iterator() {
 	output = [][]string{}
 }
 
-func validate(text string) bool {
-	var validation = len(replacedItems)
-	for index := range replacedItems {
-		if strings.Contains(text, replacedItems[index]) == false {
-			validation--
-		}
-	}
-	if validation == len(replacedItems) {
-		return true
-	}
-	return false
-}
-
 func (i Instructions) crunch() {
-	maxno := []int{}
-	matching := []int{}
-	prev := 0
+	maxno = []int{}
+	matching = []int{}
+	prev = 0
+	mainguideIndex = 0
 	for guideIndex := range guide {
 		maxno = append(maxno, icount(guide, guide[guideIndex]))
 	}
-	MainguideIndex := 0
-	for MainguideIndex < len(guide) {
-	inter:
-		if text == "" && guide[MainguideIndex] == 0 {
-			text += strings.Join(chunk[MainguideIndex], i.Delimiter) + i.Delimiter
-			matching = append(matching, guide[MainguideIndex])
-			prev = guide[MainguideIndex]
-		} else if text != "" && guide[MainguideIndex] != 0 && guide[MainguideIndex] > prev {
-			if contains(matching, guide[MainguideIndex]) == false {
-				if icount(guide, guide[MainguideIndex]) > 1 {
-					text += strings.Join(chunk[MainguideIndex], i.Delimiter) + i.Delimiter
-					matching = append(matching, guide[MainguideIndex])
-					prev = guide[MainguideIndex]
-					chunk = remove2D(chunk, MainguideIndex)
-					guide = remove1D(guide, MainguideIndex)
-					goto inter
-				} else if icount(guide, guide[MainguideIndex]) == 1 {
-					if maxno[MainguideIndex] == 1 {
-						text += strings.Join(chunk[MainguideIndex], i.Delimiter) + i.Delimiter
-						matching = append(matching, guide[MainguideIndex])
-						prev = guide[MainguideIndex]
-						goto inter
-					} else if maxno[MainguideIndex] > 1 {
-						text += strings.Join(chunk[MainguideIndex], i.Delimiter) + i.Delimiter
-						matching = append(matching, guide[MainguideIndex])
-						prev = guide[MainguideIndex]
-						MainguideIndex--
-						goto inter
-					}
+	for mainguideIndex < len(guide) {
+		text = i.chew(text, mainguideIndex)
+		mainguideIndex++
+	}
+	i.fill()
+}
+
+func (i Instructions) chew(text string, mainguideIndex int) string {
+	if text == "" && guide[mainguideIndex] == 0 {
+		text += strings.Join(chunk[mainguideIndex], i.Delimiter) + i.Delimiter
+		matching = append(matching, guide[mainguideIndex])
+		prev = guide[mainguideIndex]
+	} else if text != "" && guide[mainguideIndex] != 0 && guide[mainguideIndex] > prev {
+		if contains(matching, guide[mainguideIndex]) == false {
+			if icount(guide, guide[mainguideIndex]) > 1 {
+				text += strings.Join(chunk[mainguideIndex], i.Delimiter) + i.Delimiter
+				matching = append(matching, guide[mainguideIndex])
+				prev = guide[mainguideIndex]
+				chunk = remove2D(chunk, mainguideIndex)
+				guide = remove1D(guide, mainguideIndex)
+				text = i.chew(text, mainguideIndex)
+			} else if icount(guide, guide[mainguideIndex]) == 1 {
+				if maxno[mainguideIndex] == 1 {
+					text += strings.Join(chunk[mainguideIndex], i.Delimiter) + i.Delimiter
+					matching = append(matching, guide[mainguideIndex])
+					prev = guide[mainguideIndex]
+					text = i.chew(text, mainguideIndex)
+				} else if maxno[mainguideIndex] > 1 {
+					text += strings.Join(chunk[mainguideIndex], i.Delimiter) + i.Delimiter
+					matching = append(matching, guide[mainguideIndex])
+					prev = guide[mainguideIndex]
+					mainguideIndex--
+					text = i.chew(text, mainguideIndex)
 				}
 			}
 		}
-		MainguideIndex++
 	}
-	i.fill()
+	return text
 }
 
 func (i Instructions) fill() {
@@ -476,6 +471,19 @@ func containsrune(s string, e string) bool {
 		if a == rune(e[0]) {
 			return true
 		}
+	}
+	return false
+}
+
+func validate(text string) bool {
+	var validation = len(replacedItems)
+	for index := range replacedItems {
+		if strings.Contains(text, replacedItems[index]) == false {
+			validation--
+		}
+	}
+	if validation == len(replacedItems) {
+		return true
 	}
 	return false
 }
