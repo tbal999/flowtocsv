@@ -37,7 +37,8 @@ var (
 	text           = ""
 	prev           = 0
 	mainguideIndex = 0
-	testing        = false
+	//Testing - set this bool to 'true' if you want to test the conversion of flows step by step (in case you spot a bug or something)
+	Testing = false
 )
 
 func (in *Instructions) loadInstructions(filename string) {
@@ -523,7 +524,7 @@ func deleteall(dir string) error {
 }
 
 func printtext(i, header string) {
-	if testing == true {
+	if Testing == true {
 		fmt.Printf("%s ", header)
 		fmt.Println(i)
 		fmt.Scanln()
@@ -531,7 +532,7 @@ func printtext(i, header string) {
 }
 
 func printchunk(i [][]string) {
-	if testing == true {
+	if Testing == true {
 		for index := range i {
 			fmt.Println(i[index])
 		}
