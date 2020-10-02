@@ -37,6 +37,7 @@ var (
 	text           = ""
 	prev           = 0
 	mainguideIndex = 0
+	testing        = false
 )
 
 func (in *Instructions) loadInstructions(filename string) {
@@ -242,16 +243,19 @@ func (i Instructions) collate() {
 						guide = []int{}
 						chunk = [][]string{}
 						chunk = append(chunk, i.input[InputIndex])
+						printchunk(chunk)
 						guide = append(guide, replacedItemsIndex)
 						break
 					} else if i.input[InputIndex][0] == replacedItems[replacedItemsIndex] {
 						chunk = append(chunk, i.input[InputIndex])
+						printchunk(chunk)
 						guide = append(guide, replacedItemsIndex)
 						break
 					}
 				} else {
 					if i.input[InputIndex][0] == replacedItems[0] {
 						chunk = append(chunk, i.input[InputIndex])
+						printchunk(chunk)
 						guide = append(guide, replacedItemsIndex)
 						break
 					}
@@ -275,6 +279,7 @@ func (i Instructions) iterator() {
 	}
 	for maximum > 0 {
 		text = ""
+		printtext(text, "START")
 		i.crunch()
 		maximum--
 	}
@@ -300,12 +305,14 @@ func (i Instructions) crunch() {
 func (i Instructions) chew(text string, mainguideIndex int) string {
 	if text == "" && guide[mainguideIndex] == 0 {
 		text += strings.Join(chunk[mainguideIndex], i.Delimiter) + i.Delimiter
+		printtext(text, "APPEND")
 		matching = append(matching, guide[mainguideIndex])
 		prev = guide[mainguideIndex]
 	} else if text != "" && guide[mainguideIndex] != 0 && guide[mainguideIndex] > prev {
 		if contains(matching, guide[mainguideIndex]) == false {
 			if icount(guide, guide[mainguideIndex]) > 1 {
 				text += strings.Join(chunk[mainguideIndex], i.Delimiter) + i.Delimiter
+				printtext(text, "APPEND")
 				matching = append(matching, guide[mainguideIndex])
 				prev = guide[mainguideIndex]
 				chunk = remove2D(chunk, mainguideIndex)
@@ -314,11 +321,13 @@ func (i Instructions) chew(text string, mainguideIndex int) string {
 			} else if icount(guide, guide[mainguideIndex]) == 1 {
 				if maxno[mainguideIndex] == 1 {
 					text += strings.Join(chunk[mainguideIndex], i.Delimiter) + i.Delimiter
+					printtext(text, "APPEND")
 					matching = append(matching, guide[mainguideIndex])
 					prev = guide[mainguideIndex]
 					text = i.chew(text, mainguideIndex)
 				} else if maxno[mainguideIndex] > 1 {
 					text += strings.Join(chunk[mainguideIndex], i.Delimiter) + i.Delimiter
+					printtext(text, "APPEND")
 					matching = append(matching, guide[mainguideIndex])
 					prev = guide[mainguideIndex]
 					mainguideIndex--
@@ -336,12 +345,14 @@ func (i Instructions) fill() {
 		if strings.Contains(text, replacedItems[ReverseIndex]) == false {
 			if ReverseIndex == len(replacedItems)-1 {
 				text = text + replacedItems[ReverseIndex] + i.Delimiter + spaceStrings[ReverseIndex]
+				printtext(text, "FILL")
 				if validate(text) == true {
 					i.complete()
 				}
 			}
 			if ReverseIndex == len(replacedItems)-2 {
 				text = text + replacedItems[ReverseIndex] + i.Delimiter + spaceStrings[ReverseIndex]
+				printtext(text, "FILL")
 				if validate(text) == true {
 					i.complete()
 				}
@@ -353,11 +364,13 @@ func (i Instructions) fill() {
 				if strings.Contains(text, replacedItems[ReverseIndex-1]) == false {
 					if ReverseIndex-1 == 0 {
 						text = replacedItems[ReverseIndex-1] + spaceStrings[ReverseIndex-1] + i.Delimiter + replacedItems[ReverseIndex] + splitex[1]
+						printtext(text, "FILL")
 						if validate(text) == true {
 							i.complete()
 						}
 					} else {
 						text = splitex[0] + replacedItems[ReverseIndex-1] + spaceStrings[ReverseIndex-1] + i.Delimiter + replacedItems[ReverseIndex] + splitex[1]
+						printtext(text, "FILL")
 						if validate(text) == true {
 							i.complete()
 						}
@@ -373,7 +386,9 @@ func (i Instructions) fill() {
 func (i Instructions) complete() {
 	text = strings.Join(headerFooter[0], ",") + i.Delimiter + text + i.Delimiter + strings.Join(headerFooter[1], ",")
 	text = strings.Replace(text, i.Delimiter, ",", -1)
+	printtext(text, "COMPLETED")
 	output = append(output, strings.Split(text, ","))
+	printchunk(output)
 }
 
 func (i Instructions) writeTo(filename string, boolean bool) {
@@ -505,4 +520,21 @@ func deleteall(dir string) error {
 		}
 	}
 	return nil
+}
+
+func printtext(i, header string) {
+	if testing == true {
+		fmt.Printf("%s ", header)
+		fmt.Println(i)
+		fmt.Scanln()
+	}
+}
+
+func printchunk(i [][]string) {
+	if testing == true {
+		for index := range i {
+			fmt.Println(i[index])
+		}
+		fmt.Scanln()
+	}
 }
