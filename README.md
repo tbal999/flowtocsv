@@ -1,5 +1,5 @@
 # flowtocsv
-an etl library for mrasco dataflows - originally developed on 27th Sep.
+an etl library for mrasco dataflows - originally developed on 27th Sep 2020.
 
 Docs:
 https://pkg.go.dev/github.com/tbal999/flowtocsv
