@@ -84,23 +84,23 @@ func (i Instructions) Start() {
 }
 
 //Learn takes in all dataflows with no duplicate items but at least one of every significant item so that it can learn the dataflow structure for converting to CSV
+//All you need to do is save one energy indsutry dataflow with the filename as the dataflow identifier (i.e D0150001.txt) in the flowcrunch_learn folder.
 //Then it saves the instructions to a JSON file saved in a folder named 'flowcrunch_instructions'.
-//All you need to do is save energy indsutry dataflows with the filename as the dataflow identifier.
-//Also at the very beginning of the file, you need to insert the delimiter i.e a command or a pipe.
-func (i Instructions) Learn() {
+//It requires you to insert the delimiter of the files to learn i.e a pipe '|' or comma.
+func (i Instructions) Learn(delimiter string) {
 	learnfolder, err := ioutil.ReadDir("./flowcrunch_learn")
 	if err != nil {
 		fmt.Println(err)
 	}
 	for _, learnfile := range learnfolder {
-		i.learning("./flowcrunch_learn/" + learnfile.Name())
+		i.learning("./flowcrunch_learn/"+learnfile.Name(), delimiter)
 	}
 }
 
-func (in *Instructions) learning(filename string) {
+func (in *Instructions) learning(filename, delimiter string) {
 	i := *in
 	i.Dataflow = ""
-	i.Delimiter = ""
+	i.Delimiter = delimiter
 	i.DataItems = []string{}
 	i.Spaces = []int{}
 	i.Headers = []string{}
@@ -112,7 +112,6 @@ func (in *Instructions) learning(filename string) {
 	endname := strings.Split(filename, "/")
 	i.Outputname = strings.Split(endname[len(endname)-1], ".")[0] + "_Converted"
 	i.Dataflow = strings.Split(endname[len(endname)-1], ".")[0]
-	i.Delimiter = string(content[0])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -128,8 +127,10 @@ func (in *Instructions) learning(filename string) {
 			}
 			if index != 0 && index != len(s)-1 {
 				columns = append(columns, len(slice))
-				i.DataItems = append(i.DataItems, slice[0])
-				i.Spaces = append(i.Spaces, len(slice)-2)
+				if doesexist(i.DataItems, slice[0]) != true {
+					i.DataItems = append(i.DataItems, slice[0])
+					i.Spaces = append(i.Spaces, len(slice)-2)
+				}
 			}
 			if index == len(s)-1 {
 				columns = append(columns, len(slice))
@@ -481,6 +482,15 @@ func icount(input []int, item int) int {
 		}
 	}
 	return counter
+}
+
+func doesexist(input []string, item string) bool {
+	for index := range input {
+		if input[index] == item {
+			return true
+		}
+	}
+	return false
 }
 
 func containsrune(s string, e string) bool {
