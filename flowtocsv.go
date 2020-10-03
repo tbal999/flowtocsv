@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //Instructions is an exported struct that contains the necessary instructions to convert an MRASCO flow into a CSV file.
@@ -27,6 +28,7 @@ type Instructions struct {
 }
 
 var (
+	iterator       int
 	headerFooter   [][]string
 	output         [][]string
 	chunk          [][]string
@@ -38,6 +40,7 @@ var (
 	text           = ""
 	prev           = 0
 	mainguideIndex = 0
+	theFilename    string
 	//Testing - set this bool to 'true' if you want to test the conversion of flows step by step (in case you spot a bug or something)
 	Testing bool
 )
@@ -77,6 +80,7 @@ func (i Instructions) Start() {
 		i.loadInstructions(instructionfile.Name())
 		i.writeTo(i.Outputname, true)
 		for _, inputfile := range inputfiles {
+			theFilename = inputfile.Name()
 			i.Convert("./flowcrunch_inputfiles/" + inputfile.Name())
 		}
 	}
@@ -388,10 +392,12 @@ func (i Instructions) fill() {
 
 func (i Instructions) complete() {
 	text = strings.Join(headerFooter[0], ",") + i.Delimiter + text + i.Delimiter + strings.Join(headerFooter[1], ",")
+	text += "," + theFilename + "," + timestamp() + string(iterator)
 	text = strings.Replace(text, i.Delimiter, ",", -1)
 	printtext(text, "COMPLETED")
 	output = append(output, strings.Split(text, ","))
 	printchunk(output)
+	iterator++
 }
 
 func (i Instructions) writeTo(filename string, boolean bool) {
@@ -500,6 +506,12 @@ func containsrune(s string, e string) bool {
 		}
 	}
 	return false
+}
+
+func timestamp() string {
+	t := time.Now()
+	var x = t.Format("2006-01-02")
+	return x
 }
 
 func validate(text string) bool {
