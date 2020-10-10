@@ -1,3 +1,3 @@
-module github.com/tbal999/flowtocsv
+module flowtocsv
 
 go 1.13
