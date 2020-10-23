@@ -402,7 +402,6 @@ func (i Instructions) complete() {
 
 func (i Instructions) writeTo(filename string, boolean bool) {
 	filepath := "./flowcrunch_outputfiles/"
-	//os.Create(filepath + filename + ".csv")
 	csvFile, err := os.OpenFile(filepath+filename+".csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("Failed creating file: %s", err)
