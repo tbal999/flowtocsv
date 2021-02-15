@@ -31,6 +31,7 @@ func main() {
 This will create four folders - flowcrunch_inputfiles, flowcrunch_instructions, flowcrunch_learn and flowcrunch_outputfiles.
 Simply save an example dataflow i.e a D0150 in the 'learn' folder and it will generate the necessary instructions to parse that dataflow into a CSV format:
 ```
+a fake dataflow clob
 ZHV|99999|D0150001|M|LLLL|X|AAAA|12345||||TR01|
 288|12345|20179568|D|x|
 289|0158|20179568|Z||
