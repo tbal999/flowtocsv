@@ -11,6 +11,9 @@ After building many different versions of this type of tool in the past, decided
 This particular library can also handle other flat file types. My stance would be to try it out. If it works, great!
 Through doing this I discovered new ways how to wrangle data using recursion in go. This library can be inserted into ETL packaged solutions.
 
+At the moment, this library works with files i.e the workflow would be SFTP server -> download data flows to a folder -> parse data flows into csv -> load into SQL.
+You could probably adjust this library so that it works with an API. i.e connect to API -> grab dataflows -> parse etc
+
 Example code:
 ```
 package main
