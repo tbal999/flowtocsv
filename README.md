@@ -4,7 +4,7 @@ Then you can load them into SQL to do automation / analysis.
 
 <b>FOR:</b> Data analysts in small energy industry retail firms who want to develop BI around energy industry data i.e gas and electricity data but do not have the capability to automate the parsing of MRASCO dataflows into their servers.
 
-USE CASE: You want to monitor read disputes actively, tracking when they are raised, and when they are rejected etc, but you don't want to hire a contractor to build you a workflow for £££/$$$. 
+<b>USE CASE:</b> You want to monitor read disputes actively, tracking when they are raised, and when they are rejected etc, but you don't want to hire a contractor to build you a workflow for £££/$$$. 
 1) Ensure you have SFTP server (or API) up and running which gives you access to daily incoming D0300 dataflows
 2) Set up pipeline to download all D0300 dataflows daily to server to a flowcrunch_inputfiles folder
 3) Set up flowtocsv so that it can parse D0300 dataflows into CSV format
@@ -15,7 +15,7 @@ You've got an up and running BI pipeline that keeps track of read disputes and w
 
 The number of use cases for this tool is AT LEAST the same as the number of UK energy industry dataflows that exist for suppliers/retailers (128). Each of varying significance and impact.
 
-Docs:
+<b>DOCUMENTATION:</b>
 https://pkg.go.dev/github.com/tbal999/flowtocsv
 
 This particular library can also handle other flat file types. My stance would be to try it out. If it works, great!
@@ -26,7 +26,7 @@ At the moment there are a few workflows for this library.
 1) SFTP server -> download data flows to a folder -> parse data flows into csv -> load into SQL.
 2) Connect to MRASCO SQL server or API -> load clobs into Go as strings -> parse clobs into csv -> load into SQL.
 
-Example code:
+<b>Example code:</b>
 ```
 package main
 
