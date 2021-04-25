@@ -107,20 +107,23 @@ func (i Instructions) StartFiles() {
 //Start begins the conversion of energy industry dataflows into CSV files.
 //Before using start, you'll want to use the Learn function.
 func (i Instructions) ConvertClob(clob string) [][]string {
-	instructions, err := ioutil.ReadDir("./flowcrunch_instructions")
-	if err != nil {
-		fmt.Println(err)
-	}
-	for _, instructionfile := range instructions {
-		i.loadInstructions(instructionfile.Name())
-		i.writeTo(i.Outputname, true)
-		i.convertClob(clob)
-		if Testing {
-			return output
+	if !Testing {
+		instructions, err := ioutil.ReadDir("./flowcrunch_instructions")
+		if err != nil {
+			fmt.Println(err)
 		}
+		for _, instructionfile := range instructions {
+			i.loadInstructions(instructionfile.Name())
+			i.writeTo(i.Outputname, true)
+			i.convertClob(clob)
+		}
+		fmt.Println("Complete")
+	} else {
+		i.convertClob(clob)
+		return output
 	}
-	fmt.Println("Complete")
 	return nil
+
 }
 
 // LearnFile takes in all dataflows with no duplicate items but at least one of every significant item so that it can learn the dataflow structure for converting to CSV
@@ -530,31 +533,37 @@ func (i Instructions) complete() {
 }
 
 func (i Instructions) writeTo(filename string, boolean bool) {
-	filepath := "./flowcrunch_outputfiles/"
-	csvFile, err := os.OpenFile(filepath+filename+".csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatalf("Failed creating file: %s", err)
-	}
-	csvwriter := csv.NewWriter(csvFile)
-	if !boolean {
-		for index := range output {
-			output[index] = append(output[index], strconv.Itoa(index))
-			err := csvwriter.Write(output[index])
+	if !Testing {
+		filepath := "./flowcrunch_outputfiles/"
+		csvFile, err := os.OpenFile(filepath+filename+".csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("Failed creating file: %s", err)
+		}
+		csvwriter := csv.NewWriter(csvFile)
+		if !boolean {
+			for index := range output {
+				output[index] = append(output[index], strconv.Itoa(index))
+				err := csvwriter.Write(output[index])
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+		} else {
+			err := csvwriter.Write(i.Headers)
 			if err != nil {
 				fmt.Println(err)
 			}
 		}
+		if err := csvwriter.Error(); err != nil {
+			log.Fatalln("error writing csv:", err)
+		}
+		csvwriter.Flush()
+		csvFile.Close()
 	} else {
-		err := csvwriter.Write(i.Headers)
-		if err != nil {
-			fmt.Println(err)
+		for index := range output {
+			output[index] = append(output[index], strconv.Itoa(index))
 		}
 	}
-	if err := csvwriter.Error(); err != nil {
-		log.Fatalln("error writing csv:", err)
-	}
-	csvwriter.Flush()
-	csvFile.Close()
 }
 
 // \/ HELPER FUNCTIONS \/ ////////////////////
