@@ -1,9 +1,8 @@
-# flowtocsv
+# flowtocsv originally developed 27th Sep 2019 onwards.
 This is an MRASCO ETL library that can convert MRASCO flows into CSV files.
 Then you can load them into SQL to do automation / analysis.
 
 FOR: Data analysts in small energy industry retail firms who want to develop BI around energy industry data i.e gas and electricity data but do not have the capability to automate the parsing of MRASCO dataflows into their servers.
-originally developed 27th Sep onwards.
 
 USE CASE: You want to monitor read disputes actively, tracking when they are raised, and when they are rejected etc, but you don't want to hire a contractor to build you a workflow for £££/$$$. 
 1) Ensure you have SFTP server (or API) up and running which gives you access to daily incoming D0300 dataflows
