@@ -13,6 +13,8 @@ USE CASE: You want to monitor read disputes actively, tracking when they are rai
 
 You've got an up and running BI pipeline that keeps track of read disputes and whether they are successful/rejected/ignored etc etc.
 
+The number of use cases for this tool is AT LEAST the same number as the number of UK energy industry dataflows that exist for suppliers/retailers (128). Of varying significance and impact.
+
 Docs:
 https://pkg.go.dev/github.com/tbal999/flowtocsv
 
