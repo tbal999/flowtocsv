@@ -104,8 +104,8 @@ func (i Instructions) StartFiles() {
 	fmt.Println("Complete")
 }
 
-//Start begins the conversion of energy industry dataflows into CSV files.
-//Before using start, you'll want to use the Learn function.
+//ConvertClob begins the conversion of clob strings into a 2D array which can either be written to CSV or passed to a database/warehouse.
+//Before using ConvertClob, you'll want to use the LearningClob function.
 func (i Instructions) ConvertClob(clob string) [][]string {
 	if !Testing {
 		instructions, err := ioutil.ReadDir("./flowcrunch_instructions")
@@ -142,6 +142,7 @@ func (i Instructions) LearnFile(delimiter string) {
 
 // LearningClob takes in a dataflow name i.e D0150 (string), dataflow clob (string) and delimiter (string)
 // and creates instructions on how to convert that clob into a CSV version of the dataflow.
+// instructions are saved to flowcrunch_instructions folder as JSON
 func (in *Instructions) LearningClob(dataflowname, content, delimiter string) {
 	i := *in
 	i.Dataflow = ""
