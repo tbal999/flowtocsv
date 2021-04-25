@@ -60,11 +60,26 @@ func (in *Instructions) loadInstructions(filename string) {
 // flowcrunch_outputfiles - where any generated CSVs are placed
 // init also clears any files contained within the 'flowcrunch_outputfiles' folder every time
 func (i Instructions) Init() {
-	ensureDir("flowcrunch_learn")
-	ensureDir("flowcrunch_instructions")
-	ensureDir("flowcrunch_inputfiles")
-	ensureDir("flowcrunch_outputfiles")
-	deleteall("flowcrunch_outputfiles")
+	err := ensureDir("flowcrunch_learn")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = ensureDir("flowcrunch_instructions")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = ensureDir("flowcrunch_inputfiles")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = ensureDir("flowcrunch_outputfiles")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = deleteall("flowcrunch_outputfiles")
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 //Start begins the conversion of energy industry dataflows into CSV files.
@@ -161,8 +176,7 @@ func (in *Instructions) LearningClob(dataflowname, content, delimiter string) {
 	}
 	var y = 0
 	for index := range columns {
-		var x = 0
-		for x = 0; x < columns[index]; x++ {
+		for x := 0; x < columns[index]; x++ {
 			y++
 			i.Headers = append(i.Headers, i.Dataflow+"_COLUMN_"+strconv.Itoa(y))
 		}
@@ -326,8 +340,7 @@ func (in *Instructions) learningFile(filename, delimiter string) {
 	}
 	var y = 0
 	for index := range columns {
-		var x = 0
-		for x = 0; x < columns[index]; x++ {
+		for x := 0; x < columns[index]; x++ {
 			y++
 			i.Headers = append(i.Headers, i.Dataflow+"_COLUMN_"+strconv.Itoa(y))
 		}
@@ -526,10 +539,16 @@ func (i Instructions) writeTo(filename string, boolean bool) {
 	if !boolean {
 		for index := range output {
 			output[index] = append(output[index], strconv.Itoa(index))
-			csvwriter.Write(output[index])
+			err := csvwriter.Write(output[index])
+			if err != nil {
+				fmt.Println(err)
+			}
 		}
 	} else {
-		csvwriter.Write(i.Headers)
+		err := csvwriter.Write(i.Headers)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 	if err := csvwriter.Error(); err != nil {
 		log.Fatalln("error writing csv:", err)
