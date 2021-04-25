@@ -5,7 +5,7 @@ Then you can load them into SQL to do automation / analysis.
 <b>DOCUMENTATION:</b>
 https://pkg.go.dev/github.com/tbal999/flowtocsv
 
-<b>FOR:</b> Data analysts & BI Specialists in small energy industry retail firms who want to develop BI around energy industry data i.e gas and electricity data but do not have the capability to automate the parsing of MRASCO dataflows into their servers.
+<b>FOR:</b> Data analysts & BI Specialists in small energy industry retail firms who want to develop BI around energy industry data i.e gas and electricity data but do not have the capability/functionality to automate the parsing of MRASCO dataflows into their databases.
 
 <b>USE CASE:</b> You want to monitor read disputes actively, tracking when they are raised, and when they are rejected etc, but you don't want to hire a contractor to build you a workflow for £££/$$$. 
 1) Ensure you have SFTP server (or API) up and running which gives you access to daily incoming D0300 dataflows
