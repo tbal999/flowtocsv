@@ -1,4 +1,4 @@
-# flowtocsv originally developed 27th Sep 2020 onwards.
+# flowtocsv
 This is an MRASCO ETL library that can convert MRASCO flows into CSV files.
 Then you can load them into SQL to do automation / analysis.
 
