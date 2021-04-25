@@ -7,7 +7,7 @@ https://pkg.go.dev/github.com/tbal999/flowtocsv
 
 <b>FOR:</b> Data analysts & BI Specialists in small energy industry retail firms who want to develop BI around energy industry data i.e gas and electricity data but do not have the capability/functionality to automate the parsing of MRASCO dataflows into their databases.
 
-<b>USE CASE:</b> You want to monitor read disputes actively, tracking when they are raised, and when they are rejected etc, but you don't want to hire an expensive contractor to build you a workflow. 
+<b>EXAMPLE USE CASE:</b> You want to monitor read disputes actively, tracking when they are raised, and when they are rejected etc, but you don't want to hire an expensive contractor to build you a workflow. 
 1) Ensure you have SFTP server (or API) up and running which gives you access to daily incoming D0300 dataflows
 2) Set up pipeline to download all D0300 dataflows daily to server to a flowcrunch_inputfiles folder
 3) Set up flowtocsv so that it can parse D0300 dataflows into CSV format
