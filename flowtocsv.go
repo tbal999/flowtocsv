@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-//Instructions is an exported struct that contains the necessary instructions to convert an MRASCO flow into a CSV file.
-//These instructions are stored as a JSON
-//When you generate instructions, you can adjust the headers (which is the columns of the output CSV) names to match the contents of that column.
+// Instructions is an exported struct that contains the necessary instructions to convert an MRASCO flow into a CSV file.
+// These instructions are stored as a JSON
+// When you generate instructions, you can adjust the headers (which is the columns of the output CSV) names to match the contents of that column.
 type Instructions struct {
 	Dataflow   string
 	Delimiter  string
@@ -28,6 +28,9 @@ type Instructions struct {
 }
 
 var (
+	// Testing - set this bool to 'true' if you want to test the conversion of flows step by step (in case you spot a bug or something)
+	Testing = false
+
 	iterator       int
 	headerFooter   [][]string
 	output         [][]string
@@ -41,8 +44,6 @@ var (
 	prev           = 0
 	mainguideIndex = 0
 	theFilename    string
-	//Testing - set this bool to 'true' if you want to test the conversion of flows step by step (in case you spot a bug or something)
-	Testing bool
 )
 
 func (in *Instructions) loadInstructions(filename string) {
@@ -52,11 +53,12 @@ func (in *Instructions) loadInstructions(filename string) {
 	*in = i
 }
 
-//Init ensures the three folders that are necessary are created in same folder as the executable/main package
-//flowcrunch_instructions - where JSON instructions are kept
-//flowcrunch_inputfiles - where any dataflows that need to be converted are kept
-//flowcrunch_outputfiles - where any generated CSVs are placed
-//init also clears any files contained within the 'flowcrunch_outputfiles' folder.
+// Init ensures the three folders that are necessary are created in same folder as the executable/main package
+// always start with intructions.Init()
+// flowcrunch_instructions - where JSON instructions are kept
+// flowcrunch_inputfiles - where any dataflows that need to be converted are kept
+// flowcrunch_outputfiles - where any generated CSVs are placed
+// init also clears any files contained within the 'flowcrunch_outputfiles' folder every time
 func (i Instructions) Init() {
 	ensureDir("flowcrunch_learn")
 	ensureDir("flowcrunch_instructions")
@@ -67,7 +69,7 @@ func (i Instructions) Init() {
 
 //Start begins the conversion of energy industry dataflows into CSV files.
 //Before using start, you'll want to use the Learn function.
-func (i Instructions) Start() {
+func (i Instructions) StartFiles() {
 	instructions, err := ioutil.ReadDir("./flowcrunch_instructions")
 	if err != nil {
 		fmt.Println(err)
@@ -81,27 +83,48 @@ func (i Instructions) Start() {
 		i.writeTo(i.Outputname, true)
 		for _, inputfile := range inputfiles {
 			theFilename = inputfile.Name()
-			i.Convert("./flowcrunch_inputfiles/" + inputfile.Name())
+			i.ConvertFile("./flowcrunch_inputfiles/" + inputfile.Name())
 		}
 	}
 	fmt.Println("Complete")
 }
 
-//Learn takes in all dataflows with no duplicate items but at least one of every significant item so that it can learn the dataflow structure for converting to CSV
-//All you need to do is save one energy indsutry dataflow with the filename as the dataflow identifier (i.e D0150001.txt) in the flowcrunch_learn folder.
-//Then it saves the instructions to a JSON file saved in a folder named 'flowcrunch_instructions'.
-//It requires you to insert the delimiter of the files to learn i.e a pipe '|' or comma.
-func (i Instructions) Learn(delimiter string) {
+//Start begins the conversion of energy industry dataflows into CSV files.
+//Before using start, you'll want to use the Learn function.
+func (i Instructions) ConvertClob(clob string) [][]string {
+	instructions, err := ioutil.ReadDir("./flowcrunch_instructions")
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, instructionfile := range instructions {
+		i.loadInstructions(instructionfile.Name())
+		i.writeTo(i.Outputname, true)
+		i.convertClob(clob)
+		if Testing {
+			return output
+		}
+	}
+	fmt.Println("Complete")
+	return nil
+}
+
+// LearnFile takes in all dataflows with no duplicate items but at least one of every significant item so that it can learn the dataflow structure for converting to CSV
+// All you need to do is save one energy indsutry dataflow with the filename as the dataflow identifier (i.e D0150001.txt) in the flowcrunch_learn folder.
+// Then it saves the instructions to a JSON file saved in a folder named 'flowcrunch_instructions'.
+// It requires you to insert the delimiter of the files to learn i.e a pipe '|' or comma.
+func (i Instructions) LearnFile(delimiter string) {
 	learnfolder, err := ioutil.ReadDir("./flowcrunch_learn")
 	if err != nil {
 		fmt.Println(err)
 	}
 	for _, learnfile := range learnfolder {
-		i.learning("./flowcrunch_learn/"+learnfile.Name(), delimiter)
+		i.learningFile("./flowcrunch_learn/"+learnfile.Name(), delimiter)
 	}
 }
 
-func (in *Instructions) learning(filename, delimiter string) {
+// LearningClob takes in a dataflow name i.e D0150 (string), dataflow clob (string) and delimiter (string)
+// and creates instructions on how to convert that clob into a CSV version of the dataflow.
+func (in *Instructions) LearningClob(dataflowname, content, delimiter string) {
 	i := *in
 	i.Dataflow = ""
 	i.Delimiter = delimiter
@@ -112,16 +135,11 @@ func (in *Instructions) learning(filename, delimiter string) {
 	i.input = [][]string{}
 	output = [][]string{}
 	columns := []int{}
-	content, err := ioutil.ReadFile(filename)
-	endname := strings.Split(filename, "/")
-	i.Outputname = strings.Split(endname[len(endname)-1], ".")[0] + "_Converted"
-	i.Dataflow = strings.Split(endname[len(endname)-1], ".")[0]
-	if err != nil {
-		log.Fatal(err)
-	}
-	s := strings.Split(string(content), "\n")
+	i.Outputname = dataflowname + "_Converted"
+	i.Dataflow = dataflowname
+	s := strings.Split(content, "\n")
 	for index := range s {
-		if containsrune(s[index], i.Delimiter) == true {
+		if containsrune(s[index], i.Delimiter) {
 			slice := strings.Split(s[index], i.Delimiter)
 			for index := range slice {
 				slice[index] = strings.Replace(slice[index], "\"", "", -1)
@@ -131,7 +149,7 @@ func (in *Instructions) learning(filename, delimiter string) {
 			}
 			if index != 0 && index != len(s)-1 {
 				columns = append(columns, len(slice))
-				if doesexist(i.DataItems, slice[0]) != true {
+				if !doesexist(i.DataItems, slice[0]) {
 					i.DataItems = append(i.DataItems, slice[0])
 					i.Spaces = append(i.Spaces, len(slice)-2)
 				}
@@ -150,14 +168,66 @@ func (in *Instructions) learning(filename, delimiter string) {
 		}
 		i.Headers = append(i.Headers, i.Dataflow+"_COLUMN_"+strconv.Itoa(y))
 	}
-	//i.DataItems = i.DataItems[:len(i.DataItems)-1]
-	save(i)
+	if !Testing {
+		save(i)
+	}
 	*in = i
 }
 
-//Convert begins the process of converting the dataflow into a CSV file - depending on what instruction has been loaded.
-//Usually you just need to use 'Start' to convert all dataflows, but this is exported so you can target one file if necessary.
-func (in *Instructions) Convert(filename string) {
+// ConvertClob takes in a dataflow clob of type string and appends it to CSV file
+// I.E a D0150 clob (with dataflow name of 'D0150') if already learned, would be placed in a D0150_Converted.csv file in the outputfiles folder
+// You can convert as many clobs as you need, they will all be placed in the same CSV file.
+// Just run Init() method if you want to start again with new CSV.
+func (in *Instructions) convertClob(clob string) {
+	i := *in
+	headerFooter = [][]string{}
+	replacedItems = []string{}
+	spaceStrings = []string{}
+	guide = []int{}
+	text = ""
+	checking := [][]string{}
+	i.input = [][]string{}
+	checker := false
+	dataflow := strings.Split(clob, "\n")
+	count := 0
+	for index := range dataflow {
+		record := strings.Split(dataflow[index], in.Delimiter)
+		for index := range record {
+			if index == 0 {
+				checking = append(checking, record)
+				for a := range checking {
+					for b := range checking[a] {
+						if b < 4 {
+							if strings.Contains(checking[a][b], i.Dataflow) {
+								checker = true
+							}
+						}
+					}
+				}
+			}
+			record[index] = strings.Replace(record[index], "\"", "", -1)
+			record[index] = strings.Replace(record[index], ",", "", -1)
+		}
+		if checker {
+			if count != 0 {
+				i.input = append(i.input, record)
+			} else {
+				headerFooter = append(headerFooter, record)
+			}
+		}
+		count++
+	}
+	if checker {
+		headerFooter = append(headerFooter, i.input[len(i.input)-1])
+		i.input = i.input[:len(i.input)-1]
+		*in = i
+		i.replace()
+	}
+}
+
+// ConvertFile begins the process of converting the dataflow (file) into a CSV file - depending on what instruction has been loaded.
+// Usually you just need to use 'Start' to convert all dataflows, but this is exported so you can target one file if necessary.
+func (in *Instructions) ConvertFile(filename string) {
 	i := *in
 	headerFooter = [][]string{}
 	replacedItems = []string{}
@@ -187,7 +257,7 @@ func (in *Instructions) Convert(filename string) {
 				for a := range checking {
 					for b := range checking[a] {
 						if b < 4 {
-							if strings.Contains(checking[a][b], i.Dataflow) == true {
+							if strings.Contains(checking[a][b], i.Dataflow) {
 								checker = true
 							}
 						}
@@ -197,7 +267,7 @@ func (in *Instructions) Convert(filename string) {
 			record[index] = strings.Replace(record[index], "\"", "", -1)
 			record[index] = strings.Replace(record[index], ",", "", -1)
 		}
-		if checker == true {
+		if checker {
 			if count != 0 {
 				i.input = append(i.input, record)
 			} else {
@@ -206,12 +276,65 @@ func (in *Instructions) Convert(filename string) {
 		}
 		count++
 	}
-	if checker == true {
+	if checker {
 		headerFooter = append(headerFooter, i.input[len(i.input)-1])
 		i.input = i.input[:len(i.input)-1]
 		*in = i
 		i.replace()
 	}
+}
+
+func (in *Instructions) learningFile(filename, delimiter string) {
+	i := *in
+	i.Dataflow = ""
+	i.Delimiter = delimiter
+	i.DataItems = []string{}
+	i.Spaces = []int{}
+	i.Headers = []string{}
+	i.Outputname = ""
+	i.input = [][]string{}
+	output = [][]string{}
+	columns := []int{}
+	content, err := ioutil.ReadFile(filename)
+	endname := strings.Split(filename, "/")
+	i.Outputname = strings.Split(endname[len(endname)-1], ".")[0] + "_Converted"
+	i.Dataflow = strings.Split(endname[len(endname)-1], ".")[0]
+	if err != nil {
+		log.Fatal(err)
+	}
+	s := strings.Split(string(content), "\n")
+	for index := range s {
+		if containsrune(s[index], i.Delimiter) {
+			slice := strings.Split(s[index], i.Delimiter)
+			for index := range slice {
+				slice[index] = strings.Replace(slice[index], "\"", "", -1)
+			}
+			if index == 0 {
+				columns = append(columns, len(slice))
+			}
+			if index != 0 && index != len(s)-1 {
+				columns = append(columns, len(slice))
+				if !doesexist(i.DataItems, slice[0]) {
+					i.DataItems = append(i.DataItems, slice[0])
+					i.Spaces = append(i.Spaces, len(slice)-2)
+				}
+			}
+			if index == len(s)-1 {
+				columns = append(columns, len(slice))
+			}
+		}
+	}
+	var y = 0
+	for index := range columns {
+		var x = 0
+		for x = 0; x < columns[index]; x++ {
+			y++
+			i.Headers = append(i.Headers, i.Dataflow+"_COLUMN_"+strconv.Itoa(y))
+		}
+		i.Headers = append(i.Headers, i.Dataflow+"_COLUMN_"+strconv.Itoa(y))
+	}
+	save(i)
+	*in = i
 }
 
 func (in *Instructions) replace() {
@@ -276,22 +399,15 @@ func (i Instructions) collate() {
 }
 
 func (i Instructions) iterator() {
-	var maximum = 0
-	for head := 1; head <= len(guide)-1; head++ {
-		one := icount(guide, guide[head-1])
-		two := icount(guide, guide[head])
-		if two >= one {
-			maximum = two
-		}
-	}
-	for maximum > 0 {
+	for maximum := generateMax(); maximum > 0; maximum-- {
 		text = ""
 		printtext(text, "START")
 		i.crunch()
-		maximum--
 	}
 	i.writeTo(i.Outputname, false)
-	output = [][]string{}
+	if !Testing {
+		output = [][]string{}
+	}
 }
 
 func (i Instructions) crunch() {
@@ -316,7 +432,7 @@ func (i Instructions) chew(text string, mainguideIndex int) string {
 		matching = append(matching, guide[mainguideIndex])
 		prev = guide[mainguideIndex]
 	} else if text != "" && guide[mainguideIndex] != 0 && guide[mainguideIndex] > prev {
-		if contains(matching, guide[mainguideIndex]) == false {
+		if !contains(matching, guide[mainguideIndex]) {
 			if icount(guide, guide[mainguideIndex]) > 1 {
 				text += strings.Join(chunk[mainguideIndex], i.Delimiter) + i.Delimiter
 				printtext(text, "APPEND")
@@ -349,36 +465,36 @@ func (i Instructions) chew(text string, mainguideIndex int) string {
 func (i Instructions) fill() {
 	ReverseIndex := len(replacedItems) - 1
 	for ReverseIndex >= 0 {
-		if strings.Contains(text, replacedItems[ReverseIndex]) == false {
+		if !strings.Contains(text, replacedItems[ReverseIndex]) {
 			if ReverseIndex == len(replacedItems)-1 {
 				text = text + replacedItems[ReverseIndex] + i.Delimiter + spaceStrings[ReverseIndex]
 				printtext(text, "FILL")
-				if validate(text) == true {
+				if validate(text) {
 					i.complete()
 				}
 			}
 			if ReverseIndex == len(replacedItems)-2 {
 				text = text + replacedItems[ReverseIndex] + i.Delimiter + spaceStrings[ReverseIndex]
 				printtext(text, "FILL")
-				if validate(text) == true {
+				if validate(text) {
 					i.complete()
 				}
 			}
 		}
-		if strings.Contains(text, replacedItems[ReverseIndex]) == true {
+		if strings.Contains(text, replacedItems[ReverseIndex]) {
 			splitex := strings.Split(text, replacedItems[ReverseIndex])
 			if len(splitex) != 1 && ReverseIndex != 0 {
-				if strings.Contains(text, replacedItems[ReverseIndex-1]) == false {
+				if !strings.Contains(text, replacedItems[ReverseIndex-1]) {
 					if ReverseIndex-1 == 0 {
 						text = replacedItems[ReverseIndex-1] + spaceStrings[ReverseIndex-1] + i.Delimiter + replacedItems[ReverseIndex] + splitex[1]
 						printtext(text, "FILL")
-						if validate(text) == true {
+						if validate(text) {
 							i.complete()
 						}
 					} else {
 						text = splitex[0] + replacedItems[ReverseIndex-1] + spaceStrings[ReverseIndex-1] + i.Delimiter + replacedItems[ReverseIndex] + splitex[1]
 						printtext(text, "FILL")
-						if validate(text) == true {
+						if validate(text) {
 							i.complete()
 						}
 					}
@@ -392,7 +508,7 @@ func (i Instructions) fill() {
 
 func (i Instructions) complete() {
 	text = strings.Join(headerFooter[0], ",") + i.Delimiter + text + i.Delimiter + strings.Join(headerFooter[1], ",")
-	text += "," + theFilename + "," + timestamp() + string(iterator)
+	text += "," + theFilename + "," + timestamp() + "," + fmt.Sprint(iterator)
 	text = strings.Replace(text, i.Delimiter, ",", -1)
 	printtext(text, "COMPLETED")
 	output = append(output, strings.Split(text, ","))
@@ -407,7 +523,7 @@ func (i Instructions) writeTo(filename string, boolean bool) {
 		log.Fatalf("Failed creating file: %s", err)
 	}
 	csvwriter := csv.NewWriter(csvFile)
-	if boolean == false {
+	if !boolean {
 		for index := range output {
 			output[index] = append(output[index], strconv.Itoa(index))
 			csvwriter.Write(output[index])
@@ -420,6 +536,20 @@ func (i Instructions) writeTo(filename string, boolean bool) {
 	}
 	csvwriter.Flush()
 	csvFile.Close()
+}
+
+// \/ HELPER FUNCTIONS \/ ////////////////////
+
+func generateMax() int {
+	var maximum = 0
+	for head := 1; head <= len(guide)-1; head++ {
+		one := icount(guide, guide[head-1])
+		two := icount(guide, guide[head])
+		if two >= one {
+			maximum = two
+		}
+	}
+	return maximum
 }
 
 func ensureDir(dirName string) error {
@@ -449,12 +579,6 @@ func contains(s []int, e int) bool {
 		}
 	}
 	return false
-}
-
-func insert2D(slice *[][]string, tobeinserted []string) {
-	s := *slice
-	s = append(s, tobeinserted)
-	*slice = s
 }
 
 func remove2D(slice [][]string, s int) [][]string {
@@ -508,22 +632,22 @@ func containsrune(s string, e string) bool {
 }
 
 func timestamp() string {
-	t := time.Now()
-	var x = t.Format("2006-01-02")
-	return x
+	if !Testing {
+		t := time.Now()
+		var x = t.Format("20060102150405")
+		return x
+	}
+	return "testtime"
 }
 
 func validate(text string) bool {
 	var validation = len(replacedItems)
 	for index := range replacedItems {
-		if strings.Contains(text, replacedItems[index]) == false {
+		if !strings.Contains(text, replacedItems[index]) {
 			validation--
 		}
 	}
-	if validation == len(replacedItems) {
-		return true
-	}
-	return false
+	return validation == len(replacedItems)
 }
 
 func deleteall(dir string) error {
@@ -546,7 +670,7 @@ func deleteall(dir string) error {
 }
 
 func printtext(i, header string) {
-	if Testing == true {
+	if Testing {
 		fmt.Printf("%s ", header)
 		fmt.Println(i)
 		fmt.Scanln()
@@ -554,7 +678,7 @@ func printtext(i, header string) {
 }
 
 func printchunk(i [][]string) {
-	if Testing == true {
+	if Testing {
 		for index := range i {
 			fmt.Println(i[index])
 		}
