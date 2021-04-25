@@ -2,6 +2,9 @@
 This is an MRASCO ETL library that can convert MRASCO flows into CSV files.
 Then you can load them into SQL to do automation / analysis.
 
+<b>DOCUMENTATION:</b>
+https://pkg.go.dev/github.com/tbal999/flowtocsv
+
 <b>FOR:</b> Data analysts in small energy industry retail firms who want to develop BI around energy industry data i.e gas and electricity data but do not have the capability to automate the parsing of MRASCO dataflows into their servers.
 
 <b>USE CASE:</b> You want to monitor read disputes actively, tracking when they are raised, and when they are rejected etc, but you don't want to hire a contractor to build you a workflow for £££/$$$. 
@@ -14,9 +17,6 @@ Then you can load them into SQL to do automation / analysis.
 You've got an up and running BI pipeline that keeps track of read disputes and whether they are successful/rejected/ignored etc etc.
 
 The number of use cases for this tool is AT LEAST the same as the number of UK energy industry dataflows that exist for suppliers/retailers (128). Each of varying significance and impact.
-
-<b>DOCUMENTATION:</b>
-https://pkg.go.dev/github.com/tbal999/flowtocsv
 
 This particular library can also handle other flat file types. My stance would be to try it out. If it works, great!
 Through doing this I discovered new ways how to wrangle data using recursion in go. This library can be inserted into ETL packaged solutions.
