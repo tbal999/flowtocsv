@@ -10,12 +10,10 @@ https://pkg.go.dev/github.com/tbal999/flowtocsv
 This particular library can also handle other flat file types. My stance would be to try it out. If it works, great!
 Through doing this I discovered new ways how to wrangle data using recursion in go. This library can be inserted into ETL packaged solutions.
 
-At the moment there are two workflows for this library.
+At the moment there are a few workflows for this library.
 
 1) SFTP server -> download data flows to a folder -> parse data flows into csv -> load into SQL.
-2) Connect to MRASCO SQL server -> load clobs into Go as strings -> parse clobs into csv -> load into SQL.
-
-You could probably adjust this library so that it works with an API. i.e connect to API -> grab dataflows -> parse etc
+2) Connect to MRASCO SQL server or API -> load clobs into Go as strings -> parse clobs into csv -> load into SQL.
 
 Example code:
 ```
