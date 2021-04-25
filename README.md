@@ -2,7 +2,17 @@
 This is an MRASCO ETL library that can convert MRASCO flows into CSV files.
 Then you can load them into SQL to do automation / analysis.
 
+FOR: Data analysts in small energy industry retail firms who want to develop BI around energy industry data i.e gas and electricity data but do not have the capability to automate the parsing of MRASCO dataflows into their servers.
 originally developed 27th Sep onwards.
+
+USE CASE: You want to monitor read disputes actively, tracking when they are raised, and when they are rejected etc, but you don't want to hire a contractor to build you a workflow for £££/$$$. 
+1) Ensure you have SFTP server (or API) up and running which gives you access to daily incoming D0300 dataflows
+2) Set up pipeline to download all D0300 dataflows daily to server to a flowcrunch_inputfiles folder
+3) Set up flowtocsv so that it can parse D0300 dataflows into CSV format
+4) Upload CSV file into SQL using staging/production tables & merge methodology
+5) Use Tableau / Power BI / Qlik to load table into view and join necessray tables (will require energy industry knowledge!)
+
+You've got an up and running BI pipeline that keeps track of read disputes and whether they are successful/rejected/ignored etc etc.
 
 Docs:
 https://pkg.go.dev/github.com/tbal999/flowtocsv
