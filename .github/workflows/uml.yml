@@ -37,10 +37,6 @@ jobs:
       - name: UML files considered echo output
         run: |
           echo ${{ steps.getfile.outputs.files }}
-      - name: Generate SVG Diagrams
-        uses: cloudbees/plantuml-github-action@master
-        with:
-            args: -v -tsvg ${{ steps.getfile.outputs.files }}
       - name: Generate PNG Diagrams
         uses: cloudbees/plantuml-github-action@master
         with:
@@ -51,5 +47,5 @@ jobs:
           commit_user_name: "my user name"
           commit_user_email: "me@email.org"
           commit_author: "My User <me@email.org>"
-          commit_message: "Generate SVG and PNG images for PlantUML diagrams" 
+          commit_message: "Generate PNG images for PlantUML diagrams" 
           branch: ${{ github.head_ref }}
