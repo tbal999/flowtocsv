@@ -19,6 +19,9 @@ endif
 
 :Go To Bed;
 
+
+:Go To Bed2;
+
 stop
 
 @enduml
