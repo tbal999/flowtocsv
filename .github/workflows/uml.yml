@@ -23,10 +23,7 @@ jobs:
         run: |
           git diff-tree -r --no-commit-id --summary ${{ github.sha }} \
           | awk -F' ' '{
-            # ensure we are not trying to process deleted files
-            # only process puml files
-            # do not try to process our theme or custom config
-            if ( $1 !~ /^delete$/ && $4 ~ /\.puml$/ && $4 !~ /(theme|config)\.puml$/ )
+            if ( $4 ~ /\.puml$/ && $4 !~ /(theme|config)\.puml$/ )
             {
               # only print the file name and strip newlines for spaces
               printf "::set-output name=files::" "%s ", $4
