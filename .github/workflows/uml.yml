@@ -21,7 +21,7 @@ jobs:
       - name: Get changed UML files
         id: getfile
         run: |
-          git diff-tree -r --no-commit-id --summary ${{ github.sha }} \
+          git ls-tree --full-tree -r --name-only HEAD \
           | awk -F' ' '{
             if ( $4 ~ /\.puml$/ && $4 !~ /(theme|config)\.puml$/ )
             {
