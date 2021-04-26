@@ -9,3 +9,5 @@
 
 // Add more detail
 [≪IDisposable≫;Customer|+forname: string;+surname: string;-password: string|login(user,pass)]
+
+//
