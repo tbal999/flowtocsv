@@ -1,5 +1,7 @@
 package flowtocsv
 
+/* flowtocsv package */
+
 import (
 	"encoding/csv"
 	"encoding/json"
