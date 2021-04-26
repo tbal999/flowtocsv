@@ -18,26 +18,10 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - name: Get changed UML files
-        id: getfile
-        run: |
-          git ls-tree --name-only -r main \
-          | awk -F' ' '{
-            if ( $4 ~ /\.puml$/ && $4 !~ /(theme|config)\.puml$/ )
-            {
-              # only print the file name and strip newlines for spaces
-              printf "::set-output name=files::" "%s ", $4
-            }
-          }
-          END { print "" } # ensure we do print a newline at the end
-          '
-      - name: UML files considered echo output
-        run: |
-          echo ${{ steps.getfile.outputs.files }}
       - name: Generate PNG Diagrams
         uses: cloudbees/plantuml-github-action@master
         with:
-            args: -v -tpng ${{ steps.getfile.outputs.files }}
+            args: -v -tpng graph.puml
       - name: Push Local Changes
         uses:  stefanzweifel/git-auto-commit-action@v4.1.2 
         with: 
