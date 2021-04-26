@@ -1,0 +1,11 @@
+// Example UML
+// ------------------
+
+// Chain elements like this
+[Customer]<>-orders*>[Order]++-0..*>[LineItem]
+
+// Add notes
+[Order]-[note: Aggregate Root ala DDD{bg:wheat}]
+
+// Add more detail
+[≪IDisposable≫;Customer|+forname: string;+surname: string;-password: string|login(user,pass)]
