@@ -12,8 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-      with:
-        path: './repo'
 
     - name: Set up Go
       uses: actions/setup-go@v2
@@ -23,7 +21,7 @@ jobs:
     - name: run composite action
       uses: tbal999/actionapp@4
       with:
-        args: './repo'
+        args: './'
 
     - name: Build
       run: go build -v ./...
