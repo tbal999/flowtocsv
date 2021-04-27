@@ -18,15 +18,19 @@ jobs:
       - name: Branch details
         shell: bash
         run: |
-             echo Reserved for REPO_NAME=${GITHUB_REPOSITORY##*/}
-             echo GITHUB_REF=${GITHUB_REF}
-             echo EXTRACT_GITHUB_REF=${GITHUB_REF##*/}
-             echo EXTRACT_GITHUB_REF_HEADS=$(echo ${GITHUB_REF#refs/heads/})
+             if [ -z "${GITHUB_HEAD_REF}" ]
+             then
+              echo NOT pull request, branch = $(echo ${GITHUB_REF#refs/heads/})
+              echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+             else
+              echo pull request, branch = $(echo ${GITHUB_HEAD_REF})
+              echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF})" >> $GITHUB_ENV
+             fi
         id: extract_branch          
       - name: Checkout branch
         uses: actions/checkout@v2
         with:
-          ref: $(echo ${GITHUB_REF#refs/heads/})
+          ref: ${{ env.BRANCH_NAME }}
           path: './mainrepo'
           fetch-depth: 0
       - name: checkout plantuml
