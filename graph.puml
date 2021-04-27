@@ -1,0 +1,31 @@
+@startuml
+package ...mainre{
+class Instructions {
++Dataflow: string
++Delimiter: string
++DataItems: []string
++Spaces: []int
++Headers: []string
++Outputname: string
+-input: [][]string
++*loadInstructions(filename string): 
++Init(): 
++StartFiles(): 
++ConvertClob(clob string): [][]string
++LearnFile(delimiter string): 
++*LearningClob(dataflowname string): 
++*convertClob(clob string): 
++*ConvertFile(filename string): 
++*learningFile(filename string): 
++*replace(): 
+-collate(): 
+-iterator(): 
+-crunch(): 
+-chew(text string, mainguideIndex int): string
+-fill(): 
+-complete(): 
+-writeTo(filename string, boolean bool): 
+}
+}
+
+@enduml
