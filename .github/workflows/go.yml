@@ -22,7 +22,7 @@ jobs:
       uses: tbal999/actionapp@5
       with:
         one: './'
-        two: ${{ secrets.SECRET_TOKEN }}
+        two: ${{ secrets.SECRET1 }}
 
     - name: Build
       run: go build -v ./...
