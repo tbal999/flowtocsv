@@ -18,13 +18,15 @@ jobs:
       - name: Extract branch name
         shell: bash
         run: |
-             echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-             echo "${{ steps.extract_branch.outputs.branch }}"
+             echo Reserved for REPO_NAME=${GITHUB_REPOSITORY##*/}
+             echo GITHUB_REF=${GITHUB_REF}
+             echo EXTRACT_GITHUB_REF=${GITHUB_REF##*/}
+             echo EXTRACT_GITHUB_REF_HEADS=$(echo ${GITHUB_REF#refs/heads/})
         id: extract_branch          
       - name: Checkout branch
         uses: actions/checkout@v2
         with:
-          ref: ${{ steps.extract_branch.outputs.branch }}
+          ref: ${GITHUB_REPOSITORY##*/}
           path: './mainrepo'
           fetch-depth: 0
       - name: checkout plantuml
