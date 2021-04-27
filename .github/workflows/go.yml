@@ -19,7 +19,7 @@ jobs:
         go-version: 1.15
         
     - name: run composite action
-      uses: tbal999/actionapp@7
+      uses: tbal999/actionapp@9
       with:
         path: './'
         key: ${{ secrets.KEY }} 
