@@ -21,7 +21,9 @@ jobs:
     - name: run composite action
       uses: tbal999/actionapp@6
       with:
-        one: './'
+        one: |
+             ./
+             ${{ secrets.SECRET1 }} 
 
     - name: Build
       run: go build -v ./...
