@@ -28,20 +28,9 @@ jobs:
           ref: ${{ steps.extract_branch.outputs.branch }}
           fetch-depth: 0
       - name: checkout plantuml
-        uses: tbal999/go-plantuml-action@2
+        uses: tbal999/go-plantuml-action@3
         with: 
           args: -v -tpng ./mainrepo
-          path: './plantuml'
-      - name: create puml file
-        run: |
-            cd ./plantuml
-            if [ -f "../mainrepo/graph.puml" ] ; then
-              rm "../mainrepo/graph.puml"
-            fi
-            if [ -f "../mainrepo/graph.png" ] ; then
-              rm "../mainrepo/graph.png"
-            fi
-            cp graph.puml ../mainrepo
       - name: generate puml png diagram
         uses: cloudbees/plantuml-github-action@master
         with:
