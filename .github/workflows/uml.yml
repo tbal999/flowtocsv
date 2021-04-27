@@ -28,7 +28,7 @@ jobs:
           ref: ${{ steps.extract_branch.outputs.branch }}
           fetch-depth: 0
       - name: checkout plantuml
-        uses: tbal999/go-plantuml-action@1
+        uses: tbal999/go-plantuml-action@2
         with: 
           args: -v -tpng ./mainrepo
           path: './plantuml'
