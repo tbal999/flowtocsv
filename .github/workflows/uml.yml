@@ -15,7 +15,7 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: 1.15
-      - name: Extract branch name
+      - name: Branch details
         shell: bash
         run: |
              echo Reserved for REPO_NAME=${GITHUB_REPOSITORY##*/}
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v2
         with:
-          ref: ${GITHUB_REPOSITORY##*/}
+          ref: $(echo ${GITHUB_REF#refs/heads/})
           path: './mainrepo'
           fetch-depth: 0
       - name: checkout plantuml
