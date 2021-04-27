@@ -1,6 +1,6 @@
 name: Generate plantuml files (.puml) & png diagram
 
-#TODO: create composite or docker action for puml job (row 27-39) //
+#TODO: create composite or docker action for puml job (row 27-39) ///
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
       - name: checkout plantuml
         uses: tbal999/go-plantuml-action@3
         with: 
-          args: -v -tpng ./mainrepo
+          args: ./mainrepo
       - name: generate puml png diagram
         uses: cloudbees/plantuml-github-action@master
         with:
