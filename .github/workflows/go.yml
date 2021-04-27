@@ -19,10 +19,9 @@ jobs:
         go-version: 1.15
         
     - name: run composite action
-      uses: tbal999/actionapp@5
+      uses: tbal999/actionapp@6
       with:
         one: './'
-        two: ${{ secrets.SECRET1 }}
 
     - name: Build
       run: go build -v ./...
