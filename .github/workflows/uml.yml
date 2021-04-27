@@ -1,6 +1,6 @@
 name: Generate plantuml files (.puml) & png diagram
 
-#TODO: create composite or docker action for puml job (row 27-39) ///
+#TODO: create composite or docker action for puml job (row 27-39)
 
 on:
   push:
@@ -11,26 +11,37 @@ jobs:
   puml:
     runs-on: ubuntu-latest
     steps:
-      - name: Extract branch name
-        shell: bash
-        run: |
-             echo "##[set-output name=branch;]$(echo ${GITHUB_BASE_REF})"
-             echo ${{ steps.extract_branch.outputs.branch }}
-        id: extract_branch
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: 1.15
-      - name: Checkout Source
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch          
+      - name: Checkout branch
         uses: actions/checkout@v2
         with:
-          path: './mainrepo'
           ref: ${{ steps.extract_branch.outputs.branch }}
+          path: './mainrepo'
           fetch-depth: 0
       - name: checkout plantuml
-        uses: tbal999/go-plantuml-action@4
+        uses: actions/checkout@v2
         with: 
-          args: ./mainrepo
+          repository: bykof/go-plantuml
+          path: './plantuml'
+      - name: create puml file
+        run: |
+            cd ./plantuml
+            go mod tidy
+            go run . generate -d ../mainrepo -r
+            if [ -f "../mainrepo/graph.puml" ] ; then
+              rm "../mainrepo/graph.puml"
+            fi
+            if [ -f "../mainrepo/graph.png" ] ; then
+              rm "../mainrepo/graph.png"
+            fi
+            cp graph.puml ../mainrepo
       - name: generate puml png diagram
         uses: cloudbees/plantuml-github-action@master
         with:
@@ -45,4 +56,3 @@ jobs:
             git add graph.puml
             git diff-index --quiet HEAD || git commit -m "generated puml & png image"
             git push
-
