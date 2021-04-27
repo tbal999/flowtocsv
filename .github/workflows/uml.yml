@@ -30,15 +30,13 @@ jobs:
           ref: ${{ steps.extract_branch.outputs.branch }}
           fetch-depth: 0
       - name: checkout plantuml
-        uses: actions/checkout@v2
+        uses: tbal999/go-plantuml-action@1
         with: 
-          repository: bykof/go-plantuml
+          args: -v -tpng ./mainrepo
           path: './plantuml'
       - name: create puml file
         run: |
             cd ./plantuml
-            go mod tidy
-            go run . generate -d ../mainrepo -r
             if [ -f "../mainrepo/graph.puml" ] ; then
               rm "../mainrepo/graph.puml"
             fi
