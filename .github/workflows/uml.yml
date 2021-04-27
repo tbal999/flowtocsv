@@ -23,13 +23,13 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: './mainrepo'
-          ref: feature/plantuml
+          ref: ${{ env.BRANCH }}
           fetch-depth: 0
       - name: checkout plantuml
         uses: actions/checkout@v2
         with: 
           repository: bykof/go-plantuml
-          path: ${{ env.BRANCH }}
+          path: './plantuml'
       - name: create puml file
         run: |
             cd ./plantuml
