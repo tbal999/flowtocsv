@@ -21,12 +21,6 @@ jobs:
     - name: run composite action
       uses: tbal999/actionapp@7
       with:
-        path: ${{ secrets.SECRET1 }} 
-        key: 'hi'
-        space: 'hi
-             
-    - name: Build
-      run: go build -v ./...
-
-    - name: Test
-      run: go test -v ./...
+        path: './'
+        key: ${{ secrets.KEY }} 
+        space: ${{ secrets.SPACE }} 
