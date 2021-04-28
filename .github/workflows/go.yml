@@ -21,6 +21,6 @@ jobs:
     - name: run composite action
       uses: tbal999/actionapp@v15      
       with:
-        path: './hello'
+        path: './'
         key: 'Thisisakey'
         space: 'ExampleSpace'
