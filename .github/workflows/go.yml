@@ -19,7 +19,7 @@ jobs:
         go-version: 1.15
         
     - name: run composite action
-      uses: tbal999/actionapp@v11       
+      uses: tbal999/actionapp@v12       
       with:
         path: './hello'
         key: 'Thisisakey'
