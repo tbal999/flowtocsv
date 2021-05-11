@@ -1,4 +1,4 @@
-name: Generate plantuml files (.puml) & png diagram
+name: testing out action
 
 #TODO: create composite or docker action for puml job (row 27-39)
 
