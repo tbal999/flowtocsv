@@ -34,7 +34,7 @@ jobs:
           path: './mainrepo'
           fetch-depth: 0
       - name: Markdown Action
-        uses: tbal999/markdown-to-confluence@n1
+        uses: tbal999/markdown-to-confluence/node@n1
         with:
           ref: ${{ env.BRANCH_NAME }}
           path: './'
