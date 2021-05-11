@@ -40,6 +40,7 @@ jobs:
           path: './plantuml'
       - name: create puml file
         run: |
+            ls -l
             cd ./plantuml
             go mod tidy
             go run . generate -d ../mainrepo -r
