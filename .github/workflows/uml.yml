@@ -33,35 +33,13 @@ jobs:
           ref: ${{ env.BRANCH_NAME }}
           path: './mainrepo'
           fetch-depth: 0
-      - name: checkout plantuml
-        uses: actions/checkout@v2
-        with: 
-          repository: bykof/go-plantuml
-          path: './plantuml'
-      - name: create puml file
-        run: |
-            ls -l
-            cd ./plantuml
-            go mod tidy
-            go run . generate -d ../mainrepo -r
-            if [ -f "../mainrepo/graph.puml" ] ; then
-              rm "../mainrepo/graph.puml"
-            fi
-            if [ -f "../mainrepo/graph.png" ] ; then
-              rm "../mainrepo/graph.png"
-            fi
-            cp graph.puml ../mainrepo
-      - name: generate puml png diagram
-        uses: cloudbees/plantuml-github-action@master
+      - name: Markdown Action
+        uses: tbal999/markdown-to-confluence@n1
         with:
-            args: -v -tpng ./mainrepo/graph.puml
-      - name: pull & push
-        run: |
-            cd  ./mainrepo
-            git config user.name github-actions
-            git config user.email github-actions@github.com
-            git pull
-            git add graph.png
-            git add graph.puml
-            git diff-index --quiet HEAD || git commit -m "generated puml & png image"
-            git push
+          ref: ${{ env.BRANCH_NAME }}
+          path: './'
+          INPUT_CONFLUENCE_API_KEY: ""
+          INPUT_CONFLUENCE_SPACE: "XM"
+          INPUT_CONFLUENCE_USERNAME: "tom@xiatech.co.uk"
+          PROJECT_PATH: "./mainrepo"
+          fetch-depth: 0
