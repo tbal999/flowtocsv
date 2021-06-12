@@ -18,7 +18,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Unit tests
-        run: make test
+        run: go test
   lint:
     name: lint code
     runs-on: ubuntu-latest
