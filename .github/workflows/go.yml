@@ -7,15 +7,25 @@ on:
     branches: [ main ]
 
 jobs:
-
-  build:
+  test:
+    name: unit tests
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-
-    - name: run composite action
-      uses: tbal999/actionapp@v15      
-      with:
-        path: './'
-        key: 'Thisisakey'
-        space: 'ExampleSpace'
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Unit tests
+        run: make test
+  lint:
+    name: lint code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code 
+        uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.35.2
