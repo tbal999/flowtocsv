@@ -37,12 +37,12 @@ import (
 func main() {
 	f := flow.Instructions{}
 	f.Init()
-	f.Learn("|") //f.Learn(",") - for Gas SPAA Dataflows.
-	f.Start()
+	f.LearnFile("|") //f.Learn(",") - for Gas SPAA Dataflows.
+	f.StartFiles()
 }
 ```
 This will create four folders - flowcrunch_inputfiles, flowcrunch_instructions, flowcrunch_learn and flowcrunch_outputfiles.
-Simply save an example dataflow i.e a D0150 in the 'learn' folder and it will generate the necessary instructions to parse that dataflow into a CSV format:
+Simply save an example dataflow i.e a D0150001 in the 'learn' folder and it will generate the necessary instructions to parse that dataflow into a CSV format:
 ```
 a fake dataflow clob
 ZHV|99999|D0150001|M|LLLL|X|AAAA|12345||||TR01|
