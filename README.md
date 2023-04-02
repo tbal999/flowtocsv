@@ -1,6 +1,8 @@
-# flowtocsv / flowcrunch
-This is an MRASCO ETL library that can convert MRASCO flows into CSV files.
+# flowtocsv
+
+This is an extremely lightweight MRASCO ETL library that can convert MRASCO flows into CSV files.
 Then you can load them into SQL to do automation / analysis. UNDER MIT LICENSE.... 2021
+feel free to use it !
 
 <b>DOCUMENTATION:</b>
 https://pkg.go.dev/github.com/tbal999/flowtocsv
