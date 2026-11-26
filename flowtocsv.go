@@ -23,11 +23,74 @@ import (
 	"io"
 )
 
-// Metadata columns that start every row produced by Convert.
+// Metadata columns added by Convert and ConvertTables. Fields may not use
+// these names.
 const (
 	ColumnSourceFile = "source_file" // the source name passed to Convert
-	ColumnRowIndex   = "row_index"   // 1-based row number within that source
+	ColumnRowIndex   = "row_index"   // wide: 1-based row number within the source
+	ColumnID         = "id"          // tables: "<source_file>:<line>", the record's key
+	ColumnParentID   = "parent_id"   // tables: the parent record's id
+	ColumnLine       = "line"        // tables: the record's line in the source
 )
+
+var reservedColumns = map[string]bool{
+	ColumnSourceFile: true, ColumnRowIndex: true, ColumnID: true, ColumnParentID: true, ColumnLine: true,
+}
+
+// Layout selects the shape of converted output.
+type Layout string
+
+const (
+	// LayoutWide is one table per flow with one row per combination of
+	// records (see Convert).
+	LayoutWide Layout = "wide"
+	// LayoutTables is a file table plus one table per group, linked by
+	// primary and foreign keys (see ConvertTables).
+	LayoutTables Layout = "tables"
+)
+
+// recordID is the primary key of a group record in LayoutTables.
+func recordID(source string, line int) string {
+	return fmt.Sprintf("%s:%d", source, line)
+}
+
+// EmptyTables returns the tables a layout produces, without rows, in output
+// order. For LayoutTables the file table comes first, then one table per
+// group in instruction order.
+func (in *Instructions) EmptyTables(l Layout) []*Table {
+	base := sanitize(in.Flow)
+	if l == LayoutWide {
+		return []*Table{{
+			Name:       base,
+			PrimaryKey: []string{ColumnSourceFile, ColumnRowIndex},
+			Columns:    in.Columns(),
+		}}
+	}
+
+	fileTable := &Table{
+		Name:       base + "_file",
+		PrimaryKey: []string{ColumnSourceFile},
+		Columns:    append(append([]string{ColumnSourceFile}, in.Header.Fields...), in.Footer.Fields...),
+	}
+	tables := []*Table{fileTable}
+	byGroup := map[string]string{}
+	for i, g := range in.Groups {
+		t := &Table{
+			Name:        base + "_" + sanitize(g.ID),
+			PrimaryKey:  []string{ColumnID},
+			ForeignKeys: []ForeignKey{{Column: ColumnSourceFile, Table: fileTable.Name, References: ColumnSourceFile}},
+		}
+		meta := []string{ColumnID, ColumnSourceFile, ColumnLine}
+		if i > 0 {
+			meta = []string{ColumnID, ColumnParentID, ColumnSourceFile, ColumnLine}
+			t.ForeignKeys = append(t.ForeignKeys, ForeignKey{Column: ColumnParentID, Table: byGroup[g.Parent], References: ColumnID})
+		}
+		t.Columns = append(meta, g.Fields...)
+		byGroup[g.ID] = t.Name
+		tables = append(tables, t)
+	}
+	return tables
+}
 
 // Instructions describe how to flatten one dataflow. They are stored as JSON.
 // After Learn generates them you can rename any field (column) to something
@@ -42,6 +105,9 @@ type Instructions struct {
 	// Groups are in file order. The first group is the root: each root record
 	// starts a new block of rows. Every other group names its Parent.
 	Groups []Group `json:"groups"`
+	// Types maps column names to TypeDate, TypeDateTime or TypeDecimal.
+	// Unlisted columns are text.
+	Types map[string]string `json:"types,omitempty"`
 }
 
 // Segment is the header or footer line of a dataflow.
@@ -110,25 +176,47 @@ func (in *Instructions) Validate() error {
 	}
 
 	cols := map[string]bool{}
-	for _, c := range in.Columns() {
-		if c == "" {
+	for _, c := range in.fieldNames() {
+		switch {
+		case c == "":
 			return fmt.Errorf("instructions %s: empty column name", in.Flow)
-		}
-		if cols[c] {
+		case reservedColumns[c]:
+			return fmt.Errorf("instructions %s: column name %q is reserved", in.Flow, c)
+		case cols[c]:
 			return fmt.Errorf("instructions %s: duplicate column name %q", in.Flow, c)
 		}
 		cols[c] = true
 	}
+	for c, t := range in.Types {
+		if !cols[c] {
+			return fmt.Errorf("instructions %s: types lists %q, which is not a column (renamed?)", in.Flow, c)
+		}
+		if !knownType(t) {
+			return fmt.Errorf("instructions %s: column %q has unknown type %q (want %s, %s or %s)", in.Flow, c, t, TypeDate, TypeDateTime, TypeDecimal)
+		}
+	}
+	tables := map[string]bool{}
+	for _, t := range in.EmptyTables(LayoutTables) {
+		if tables[t.Name] {
+			return fmt.Errorf("instructions %s: two groups give the same table name %q", in.Flow, t.Name)
+		}
+		tables[t.Name] = true
+	}
 	return nil
 }
 
-// Columns returns the column names of tables produced by Convert, in order:
-// the metadata columns, header fields, each group's fields, footer fields.
-func (in *Instructions) Columns() []string {
-	cols := []string{ColumnSourceFile, ColumnRowIndex}
-	cols = append(cols, in.Header.Fields...)
+// fieldNames returns the header, group and footer field names, in order.
+func (in *Instructions) fieldNames() []string {
+	names := append([]string(nil), in.Header.Fields...)
 	for _, g := range in.Groups {
-		cols = append(cols, g.Fields...)
+		names = append(names, g.Fields...)
 	}
-	return append(cols, in.Footer.Fields...)
+	return append(names, in.Footer.Fields...)
+}
+
+// Columns returns the column names of the table produced by Convert, in
+// order: source_file, row_index, header fields, each group's fields, footer
+// fields.
+func (in *Instructions) Columns() []string {
+	return append([]string{ColumnSourceFile, ColumnRowIndex}, in.fieldNames()...)
 }

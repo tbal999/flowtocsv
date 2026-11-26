@@ -13,6 +13,10 @@ import (
 // fields as the widest record seen. Column names are generated (hdr_1,
 // g288_1, ftr_1, ...) and are meant to be renamed in the saved JSON.
 //
+// A column is typed (date, datetime or decimal) only when every non-empty
+// sample value fits; anything else, including numeric codes such as "0158",
+// stays text.
+//
 // Nesting is inferred conservatively. Group C is made a child of an earlier
 // group A only when a sample shows A, C, A within one parent, which proves C
 // records belong to individual A records. Otherwise C hangs off the root
@@ -58,13 +62,12 @@ func Learn(flow string, samples ...*File) (Instructions, error) {
 		Header:    Segment{ID: first.Header.ID, Fields: fieldNames("hdr", hdrW)},
 		Footer:    Segment{ID: first.Footer.ID, Fields: fieldNames("ftr", ftrW)},
 	}
+	names := map[string][]string{}
 	for _, id := range order {
-		in.Groups = append(in.Groups, Group{
-			ID:     id,
-			Parent: parents[id],
-			Fields: fieldNames("g"+sanitize(id), widths[id]),
-		})
+		names[id] = fieldNames("g"+sanitize(id), widths[id])
+		in.Groups = append(in.Groups, Group{ID: id, Parent: parents[id], Fields: names[id]})
 	}
+	in.Types = inferTypes(samples, in.Header.Fields, in.Footer.Fields, names)
 	if err := in.Validate(); err != nil {
 		return Instructions{}, fmt.Errorf("learn: %w", err)
 	}

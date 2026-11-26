@@ -328,8 +328,8 @@ func TestTableRoundTrips(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(fromCSV, tb) {
-		t.Error("CSV round trip changed the table")
+	if !reflect.DeepEqual(fromCSV.Columns, tb.Columns) || !reflect.DeepEqual(fromCSV.Rows, tb.Rows) {
+		t.Error("CSV round trip changed the columns or rows")
 	}
 
 	js, err := json.Marshal(tb)

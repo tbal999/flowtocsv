@@ -7,18 +7,30 @@ import (
 	"io"
 )
 
-// Table is flattened dataflow output. It marshals to JSON as
-// {"columns": [...], "rows": [[...], ...]} and to CSV as a header line
-// followed by the rows; both forms read back into an identical Table.
+// Table is converted dataflow output. JSON carries everything:
+// {"name", "primary_key", "foreign_keys", "columns", "rows"}. CSV carries the
+// columns and rows only; the table name is the file name, and the keys
+// follow the naming rules in ConvertTables.
 type Table struct {
-	Columns []string   `json:"columns"`
-	Rows    [][]string `json:"rows"`
+	Name        string       `json:"name,omitempty"` // e.g. "d0150" or "d0150_290"
+	PrimaryKey  []string     `json:"primary_key,omitempty"`
+	ForeignKeys []ForeignKey `json:"foreign_keys,omitempty"`
+	Columns     []string     `json:"columns"`
+	Rows        [][]string   `json:"rows"`
 }
 
-// Append adds other's rows to t. Both tables must have the same columns.
+// ForeignKey says Column holds values of the References column of Table.
+type ForeignKey struct {
+	Column     string `json:"column"`
+	Table      string `json:"table"`
+	References string `json:"references"`
+}
+
+// Append adds other's rows to t. An empty t takes other's name, keys and
+// columns; otherwise the columns must match.
 func (t *Table) Append(other *Table) error {
 	if len(t.Columns) == 0 && len(t.Rows) == 0 {
-		t.Columns = other.Columns
+		t.Name, t.PrimaryKey, t.ForeignKeys, t.Columns = other.Name, other.PrimaryKey, other.ForeignKeys, other.Columns
 	} else if !equal(t.Columns, other.Columns) {
 		return errors.New("append: tables have different columns")
 	}
