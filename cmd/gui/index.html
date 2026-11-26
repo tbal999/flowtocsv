@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>flowtocsv</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #667085; --line: #dde1e7;
+  --accent: #2f6fde; --accent-text: #ffffff; --ok: #1f8a4c; --bad: #c4372f; --warn: #a86b00;
+  --code: #eef1f5; --hover: #f0f3f8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171c; --panel: #1c2027; --text: #e6e8ec; --muted: #9aa3b2; --line: #2e343e;
+    --accent: #5b8ff0; --accent-text: #0d1117; --ok: #4cc283; --bad: #f0736a; --warn: #e0a53c;
+    --code: #252a33; --hover: #232832;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { display: flex; align-items: center; gap: 24px; padding: 12px 20px;
+  background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+header h1 { font-size: 17px; margin: 0; }
+nav { display: flex; gap: 4px; }
+nav button { background: none; border: none; color: var(--muted); padding: 6px 12px; border-radius: 6px; font: inherit; cursor: pointer; }
+nav button.active { background: var(--hover); color: var(--text); font-weight: 600; }
+#status { margin-left: auto; font-size: 13px; color: var(--muted); }
+main { padding: 20px; max-width: 1400px; margin: 0 auto; }
+.layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.panel h2 { font-size: 14px; margin: 0 0 12px; }
+label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+input[type=text], select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); color: var(--text); font: inherit; }
+input[type=file] { width: 100%; font-size: 13px; color: var(--muted); }
+button.primary, button.secondary { padding: 7px 14px; border-radius: 6px; font: inherit; cursor: pointer; border: 1px solid var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-text); }
+button.secondary { background: transparent; color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+.buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+.saved { list-style: none; margin: 0; padding: 0; }
+.saved li { padding: 7px 8px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+.saved li:hover { background: var(--hover); }
+.saved li.current { background: var(--hover); font-weight: 600; }
+.muted { color: var(--muted); font-size: 12px; }
+.error { color: var(--bad); }
+.banner { padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid; white-space: pre-wrap; }
+.banner.bad { border-color: var(--bad); color: var(--bad); }
+.banner.ok { border-color: var(--ok); color: var(--ok); }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.row > div { min-width: 120px; }
+details.card { border: 1px solid var(--line); border-radius: 8px; margin-top: 12px; background: var(--panel); }
+details.card > summary { padding: 10px 14px; cursor: pointer; display: flex; gap: 10px; align-items: center; }
+details.card > .body { padding: 0 14px 14px; }
+.tag { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--code); color: var(--muted); }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; }
+td.num { color: var(--muted); width: 36px; }
+td.sample { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+table.fields input { padding: 4px 6px; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+table.fields select { padding: 4px 6px; width: 110px; }
+.scroll { overflow: auto; max-height: 420px; border: 1px solid var(--line); border-radius: 6px; }
+.scroll table { width: max-content; min-width: 100%; }
+.scroll th { position: sticky; top: 0; background: var(--panel); }
+.scroll td { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: nowrap; }
+.files li { margin: 3px 0; }
+.st-converted { color: var(--ok); } .st-failed { color: var(--bad); } .st-skipped { color: var(--warn); }
+pre.cmd { background: var(--code); padding: 10px 12px; border-radius: 6px; white-space: pre-wrap; word-break: break-all;
+  font: 12px/1.5 ui-monospace, Consolas, monospace; margin: 12px 0 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+@media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+.empty { color: var(--muted); padding: 40px; text-align: center; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>flowtocsv</h1>
+  <nav>
+    <button data-tab="instructions" class="active">1. Instructions</button>
+    <button data-tab="convert">2. Convert</button>
+    <button data-tab="automate">3. Automate</button>
+  </nav>
+  <span id="status"></span>
+</header>
+
+<main>
+  <section id="tab-instructions">
+    <div class="layout">
+      <aside>
+        <div class="panel">
+          <h2>Learn a new flow</h2>
+          <form id="learn-form">
+            <label for="learn-files">Sample file(s) of one flow</label>
+            <input type="file" id="learn-files" name="files" multiple required>
+            <div class="grid2">
+              <div>
+                <label for="learn-flow">Flow name</label>
+                <input type="text" id="learn-flow" name="flow" placeholder="from file name">
+              </div>
+              <div>
+                <label for="learn-delim">Delimiter</label>
+                <select id="learn-delim" name="delimiter">
+                  <option value="|">| pipe (electricity)</option>
+                  <option value=",">, comma (gas SPAA)</option>
+                </select>
+              </div>
+            </div>
+            <div class="buttons"><button class="primary" type="submit">Learn</button></div>
+          </form>
+        </div>
+        <div class="panel">
+          <h2>Saved instructions</h2>
+          <ul class="saved" id="saved"></ul>
+        </div>
+      </aside>
+      <div>
+        <div id="editor-msg"></div>
+        <div id="editor"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-convert" class="hidden">
+    <div class="panel">
+      <h2>Convert files</h2>
+      <p class="muted" id="convert-using"></p>
+      <form id="convert-form">
+        <div class="grid2">
+          <div>
+            <label for="convert-files">Dataflow files</label>
+            <input type="file" id="convert-files" name="files" multiple required>
+          </div>
+          <div>
+            <label for="convert-layout">Layout</label>
+            <select id="convert-layout" name="layout">
+              <option value="wide">wide: one table, one row per combination</option>
+              <option value="tables">tables: one table per group, with keys</option>
+            </select>
+          </div>
+        </div>
+        <div class="buttons">
+          <button class="primary" type="submit">Preview</button>
+          <button class="secondary" type="button" id="export-csv">Download CSV (.zip)</button>
+          <button class="secondary" type="button" id="export-json">Download JSON (.zip)</button>
+        </div>
+      </form>
+    </div>
+    <div id="convert-msg"></div>
+    <div id="convert-results"></div>
+  </section>
+
+  <section id="tab-automate" class="hidden">
+    <div class="panel">
+      <h2>Run unattended (SSIS, Task Scheduler, cron)</h2>
+      <p class="muted">The command below runs once with no web page. It converts every file in the inbox that matches
+        saved instructions, writes the output folder, moves the inputs away and exits.
+        Exit code 0 means everything converted, 3 means some files were rejected (the rest were written), and 1 means a fatal error.
+        In SSIS, use an Execute Process Task with Executable set to <code>flowtocsv.exe</code> and Arguments set to everything after it.</p>
+      <div class="grid2" id="auto-fields"></div>
+      <pre class="cmd" id="auto-cmd"></pre>
+      <div class="buttons"><button class="secondary" type="button" id="auto-copy">Copy command</button></div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+function h(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "class") e.className = v;
+    else if (k === "value") e.value = v;
+    else if (v === true) e.setAttribute(k, "");
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null) e.append(kid instanceof Node ? kid : String(kid));
+  return e;
+}
+async function api(method, url, body) {
+  const opt = { method };
+  if (body instanceof FormData) opt.body = body;
+  else if (body !== undefined) { opt.body = JSON.stringify(body); opt.headers = { "Content-Type": "application/json" }; }
+  const r = await fetch(url, opt);
+  if (!r.ok) {
+    let msg = await r.text();
+    try { msg = JSON.parse(msg).error || msg; } catch (_) {}
+    throw new Error(msg.trim());
+  }
+  return r;
+}
+function banner(el, kind, text) { el.replaceChildren(text ? h("div", { class: "banner " + kind }, text) : ""); }
+function download(blob, name) {
+  const a = h("a", { href: URL.createObjectURL(blob), download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---- tabs ----
+for (const b of document.querySelectorAll("nav button")) {
+  b.addEventListener("click", () => {
+    for (const o of document.querySelectorAll("nav button")) o.classList.toggle("active", o === b);
+    for (const s of document.querySelectorAll("main > section")) s.classList.toggle("hidden", s.id !== "tab-" + b.dataset.tab);
+    if (b.dataset.tab === "convert") renderConvertUsing();
+  });
+}
+
+// ---- instructions model ----
+// The editor works on per-field objects so a type and sample value follow a
+// column when it is renamed; toInstructions turns it back into the JSON format.
+const TYPES = ["", "date", "datetime", "decimal"];
+let model = null, savedAs = null, dirty = false;
+
+function toModel(ins, samples = {}) {
+  const types = ins.types || {};
+  const fields = names => names.map(n => ({ name: n, type: types[n] || "", sample: samples[n] || "" }));
+  return {
+    flow: ins.flow, delimiter: ins.delimiter,
+    header: { id: ins.header.id, fields: fields(ins.header.fields) },
+    footer: { id: ins.footer.id, fields: fields(ins.footer.fields) },
+    groups: ins.groups.map(g => ({ id: g.id, parent: g.parent || "", fields: fields(g.fields) })),
+  };
+}
+function toInstructions(m) {
+  const types = {};
+  const names = fs => fs.map(f => { if (f.type) types[f.name] = f.type; return f.name; });
+  const ins = {
+    flow: m.flow, delimiter: m.delimiter,
+    header: { id: m.header.id, fields: names(m.header.fields) },
+    footer: { id: m.footer.id, fields: names(m.footer.fields) },
+    groups: m.groups.map(g => { const o = { id: g.id, fields: names(g.fields) }; if (g.parent) o.parent = g.parent; return o; }),
+  };
+  if (Object.keys(types).length) ins.types = types;
+  return ins;
+}
+function setDirty(v) {
+  dirty = v;
+  $("#status").textContent = model ? (model.flow + (savedAs ? "" : " (new)") + (dirty ? " · unsaved changes" : " · saved")) : "";
+}
+window.addEventListener("beforeunload", e => { if (dirty) e.preventDefault(); });
+
+// ---- saved list ----
+async function loadSaved() {
+  const list = $("#saved");
+  try {
+    const items = await (await api("GET", "/api/instructions")).json();
+    list.replaceChildren(...(items.length ? items.map(it => h("li", {
+      class: it.name === savedAs ? "current" : "",
+      title: it.error || "",
+      onclick: () => openSaved(it.name),
+    }, h("span", {}, it.name), it.error ? h("span", { class: "error" }, "invalid") : h("span", { class: "muted" }, it.groups + " groups")))
+      : [h("li", { class: "muted" }, "None yet. Learn a flow, then save it.")]));
+  } catch (e) { list.replaceChildren(h("li", { class: "error" }, e.message)); }
+}
+async function openSaved(name) {
+  if (dirty && !confirm("Discard unsaved changes?")) return;
+  try {
+    const ins = await (await api("GET", "/api/instructions/" + encodeURIComponent(name))).json();
+    model = toModel(ins); savedAs = name; setDirty(false);
+    banner($("#editor-msg"), "", ""); renderEditor(); loadSaved();
+  } catch (e) { banner($("#editor-msg"), "bad", name + ": " + e.message); }
+}
+
+// ---- learn ----
+$("#learn-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (dirty && !confirm("Discard unsaved changes?")) return;
+  try {
+    const res = await (await api("POST", "/api/learn", new FormData(e.target))).json();
+    model = toModel(res.instructions, res.samples); savedAs = null; setDirty(true);
+    banner($("#editor-msg"), "ok", "Learned " + model.flow + ". Rename the columns, check types and parents, then save.");
+    renderEditor(); loadSaved();
+  } catch (err) { banner($("#editor-msg"), "bad", err.message); }
+});
+
+// ---- editor ----
+function typeSelect(f) {
+  const s = h("select", { onchange: e => { f.type = e.target.value; setDirty(true); } },
+    TYPES.map(t => h("option", { value: t }, t || "text")));
+  s.value = f.type;
+  return s;
+}
+function fieldsTable(fields) {
+  return h("table", { class: "fields" },
+    h("thead", {}, h("tr", {}, h("th", {}, "#"), h("th", {}, "Column name"), h("th", {}, "Type"), h("th", {}, "Sample value"))),
+    h("tbody", {}, fields.map((f, i) => h("tr", {},
+      h("td", { class: "num" }, i + 1),
+      h("td", {}, h("input", { type: "text", value: f.name, spellcheck: "false", oninput: e => { f.name = e.target.value.trim(); setDirty(true); } })),
+      h("td", {}, typeSelect(f)),
+      h("td", { class: "sample", title: f.sample }, f.sample)))));
+}
+function card(title, tags, extra, fields, open) {
+  return h("details", { class: "card", open },
+    h("summary", {}, h("b", {}, title), tags.map(t => h("span", { class: "tag" }, t))),
+    h("div", { class: "body" }, extra, fieldsTable(fields)));
+}
+function renderEditor() {
+  const root = $("#editor");
+  if (!model) { root.replaceChildren(h("div", { class: "panel empty" }, "Learn a flow from a sample file, or open saved instructions.")); return; }
+  const groups = model.groups.map((g, i) => {
+    let parent;
+    if (i === 0) parent = h("p", { class: "muted" }, "Root group: each record starts a new block of rows.");
+    else {
+      const sel = h("select", { onchange: e => { g.parent = e.target.value; setDirty(true); } },
+        model.groups.slice(0, i).map(p => h("option", { value: p.id }, p.id)));
+      sel.value = g.parent;
+      parent = h("div", { class: "row" }, h("div", {}, h("label", {}, "Parent group"), sel),
+        h("p", { class: "muted" }, "A " + g.id + " record belongs to the nearest " + "preceding record of its parent."));
+    }
+    return card("Group " + g.id, [g.fields.length + " fields", i === 0 ? "root" : "parent " + g.parent], parent, g.fields, true);
+  });
+  root.replaceChildren(
+    h("div", { class: "panel" },
+      h("div", { class: "row" },
+        h("div", { style: "flex:1" }, h("label", {}, "Flow name (matched against the header, e.g. D0150)"),
+          h("input", { type: "text", value: model.flow, oninput: e => { model.flow = e.target.value.trim(); setDirty(true); } })),
+        h("div", {}, h("label", {}, "Delimiter"),
+          h("input", { type: "text", value: model.delimiter, size: 3, oninput: e => { model.delimiter = e.target.value; setDirty(true); } }))),
+      h("div", { class: "buttons" },
+        h("button", { class: "primary", type: "button", onclick: save }, "Save"),
+        h("button", { class: "secondary", type: "button", onclick: () =>
+          download(new Blob([JSON.stringify(toInstructions(model), null, 2) + "\n"], { type: "application/json" }), model.flow + ".json") }, "Download JSON"),
+        h("span", { class: "muted" }, "Saved to the instructions folder as <flow>.json, where the unattended run reads it."))),
+    card("Header " + model.header.id, [model.header.fields.length + " fields"], null, model.header.fields, false),
+    ...groups,
+    card("Footer " + model.footer.id, [model.footer.fields.length + " fields"], null, model.footer.fields, false));
+}
+async function save() {
+  try {
+    const name = model.flow;
+    await api("PUT", "/api/instructions/" + encodeURIComponent(name), toInstructions(model));
+    savedAs = name; setDirty(false);
+    banner($("#editor-msg"), "ok", "Saved " + name + ".json");
+    loadSaved();
+  } catch (e) { banner($("#editor-msg"), "bad", e.message); }
+}
+
+// ---- convert ----
+function renderConvertUsing() {
+  $("#convert-using").textContent = model
+    ? "Using the instructions open in the editor: " + model.flow + (dirty ? " (including unsaved changes)" : "") + "."
+    : "Open or learn instructions on the Instructions tab first.";
+}
+function convertForm(extra) {
+  if (!model) throw new Error("Open or learn instructions on the Instructions tab first.");
+  const form = $("#convert-form");
+  if (!form.files.files.length) throw new Error("Choose one or more dataflow files.");
+  const fd = new FormData(form);
+  fd.append("instructions", JSON.stringify(toInstructions(model)));
+  for (const [k, v] of Object.entries(extra || {})) fd.append(k, v);
+  return fd;
+}
+$("#convert-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const out = $("#convert-results");
+  try {
+    banner($("#convert-msg"), "", "");
+    const res = await (await api("POST", "/api/convert", convertForm())).json();
+    out.replaceChildren(
+      h("div", { class: "panel" }, h("h2", {}, "Files"),
+        h("ul", { class: "files" }, res.files.map(f => h("li", {},
+          h("b", { class: "st-" + f.status }, f.status), " ", f.name, f.error ? h("span", { class: "muted" }, " · " + f.error) : "")))),
+      ...res.tables.map(t => h("div", { class: "panel" },
+        h("h2", {}, t.name, " ", h("span", { class: "tag" }, t.total_rows + " rows")),
+        h("p", { class: "muted" },
+          "Primary key: " + (t.primary_key || []).join(", "),
+          (t.foreign_keys || []).map(fk => " · " + fk.column + " → " + fk.table + "." + fk.references)),
+        h("div", { class: "scroll" }, h("table", {},
+          h("thead", {}, h("tr", {}, t.columns.map(c => h("th", {}, c)))),
+          h("tbody", {}, t.rows.map(r => h("tr", {}, r.map(v => h("td", {}, v))))))),
+        t.total_rows > t.rows.length ? h("p", { class: "muted" }, "Showing the first " + t.rows.length + " rows.") : null)));
+  } catch (err) { banner($("#convert-msg"), "bad", err.message); }
+});
+for (const fmt of ["csv", "json"]) {
+  $("#export-" + fmt).addEventListener("click", async () => {
+    try {
+      const fd = convertForm({ format: fmt });
+      const r = await api("POST", "/api/export", fd);
+      const name = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/);
+      download(await r.blob(), name ? name[1] : "flowtocsv.zip");
+    } catch (err) { banner($("#convert-msg"), "bad", err.message); }
+  });
+}
+
+// ---- automate ----
+const auto = { instructions: "instructions", inbox: "C:\\flows\\inbox", out: "C:\\flows\\out",
+  archive: "C:\\flows\\archive", rejected: "C:\\flows\\rejected", state: "C:\\flows\\flowtocsv-state.json",
+  log: "C:\\flows\\flowtocsv.log", layout: "tables" };
+const autoLabels = { instructions: "Instructions folder", inbox: "Inbox (files to convert)", out: "Output folder",
+  archive: "Archive (converted inputs; blank = leave)", rejected: "Rejected (failed inputs; blank = leave)",
+  state: "State file (blank = none)", log: "Log file (blank = none)" };
+function q(v) { return /[\s"]/.test(v) ? '"' + v.replace(/"/g, '\\"') + '"' : v; }
+function renderAuto() {
+  const parts = ["flowtocsv.exe", "convert", "-layout", auto.layout, "-i", q(auto.instructions), "-o", q(auto.out)];
+  for (const [flag, key] of [["-archive", "archive"], ["-rejected", "rejected"], ["-state", "state"], ["-log", "log"]])
+    if (auto[key]) parts.push(flag, q(auto[key]));
+  parts.push(q(auto.inbox));
+  $("#auto-cmd").textContent = parts.join(" ");
+}
+(function buildAuto() {
+  const fields = Object.entries(autoLabels).map(([k, label]) => h("div", {}, h("label", {}, label),
+    h("input", { type: "text", value: auto[k], spellcheck: "false", oninput: e => { auto[k] = e.target.value.trim(); renderAuto(); } })));
+  const layout = h("select", { onchange: e => { auto.layout = e.target.value; renderAuto(); } },
+    h("option", { value: "tables" }, "tables"), h("option", { value: "wide" }, "wide"));
+  layout.value = auto.layout;
+  $("#auto-fields").replaceChildren(...fields, h("div", {}, h("label", {}, "Layout"), layout));
+  renderAuto();
+})();
+$("#auto-copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("#auto-cmd").textContent); $("#auto-copy").textContent = "Copied"; }
+  catch (_) { $("#auto-copy").textContent = "Select the text and copy it"; }
+  setTimeout(() => { $("#auto-copy").textContent = "Copy command"; }, 1500);
+});
+
+api("GET", "/api/config").then(r => r.json()).then(c => {
+  auto.instructions = c.instructions_dir;
+  const first = $("#auto-fields input");
+  if (first) first.value = auto.instructions;
+  renderAuto();
+}).catch(() => {});
+
+renderEditor(); loadSaved();
+</script>
+</body>
+</html>

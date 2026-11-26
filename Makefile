@@ -1,3 +1,5 @@
+EXE := $(if $(filter Windows_NT,$(OS)),.exe,)
+
 .PHONY: check test vet build
 
 check: vet test
@@ -10,4 +12,4 @@ vet:
 	@test -z "$$(gofmt -l .)" || { gofmt -l .; echo "files above need gofmt"; exit 1; }
 
 build:
-	go build -o bin/ ./cmd/flowtocsv
+	go build -o bin/flowtocsv$(EXE) ./cmd

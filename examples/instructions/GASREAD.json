@@ -1,0 +1,63 @@
+{
+  "flow": "GASREAD",
+  "delimiter": ",",
+  "header": {
+    "id": "A00",
+    "fields": [
+      "file_type",
+      "sender",
+      "recipient",
+      "file_date",
+      "file_time",
+      "file_sequence"
+    ]
+  },
+  "footer": {
+    "id": "Z99",
+    "fields": [
+      "record_count"
+    ]
+  },
+  "groups": [
+    {
+      "id": "S10",
+      "fields": [
+        "mprn",
+        "supply_start_date",
+        "ldz"
+      ]
+    },
+    {
+      "id": "S20",
+      "parent": "S10",
+      "fields": [
+        "meter_serial",
+        "meter_model",
+        "imperial_flag"
+      ]
+    },
+    {
+      "id": "S30",
+      "parent": "S20",
+      "fields": [
+        "read_date",
+        "read_value",
+        "read_type",
+        "correction_factor"
+      ]
+    },
+    {
+      "id": "S40",
+      "parent": "S10",
+      "fields": [
+        "occupancy"
+      ]
+    }
+  ],
+  "types": {
+    "supply_start_date": "date",
+    "read_date": "date",
+    "correction_factor": "decimal",
+    "file_date": "date"
+  }
+}

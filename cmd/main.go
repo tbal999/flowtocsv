@@ -4,6 +4,7 @@
 //	flowtocsv learn   [-d DELIM] [-flow NAME] [-o FILE] SAMPLE...
 //	flowtocsv convert -i INSTRUCTIONS [-i ...] [-layout wide|tables]
 //	                  [-format csv|json] [-state FILE] [-o DIR] INPUT...
+//	flowtocsv gui     [-addr HOST:PORT] [-dir INSTRUCTIONS_DIR] [-open=false]
 package main
 
 import (
@@ -17,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/tbal999/flowtocsv"
 )
@@ -25,8 +27,12 @@ const usage = `usage:
   flowtocsv learn   [-d DELIM] [-flow NAME] [-o FILE] SAMPLE...
   flowtocsv convert -i INSTRUCTIONS [-i ...] [-layout wide|tables]
                     [-format csv|json] [-state FILE] [-o DIR] INPUT...
+  flowtocsv gui     [-addr HOST:PORT] [-dir INSTRUCTIONS_DIR] [-open=false]
 
-learn    infers instructions (JSON) for one dataflow from sample files.
+gui      opens a local web page to learn and edit instructions (saved in
+         INSTRUCTIONS_DIR, default "instructions") and to preview and
+         download conversions. It only accepts connections from this machine.
+learn   infers instructions (JSON) for one dataflow from sample files.
 convert  converts every input that matches an instruction set. Every flow's
          output files are rewritten on each run, header-only if no input
          matched, so stale output is never loaded twice.
@@ -44,12 +50,24 @@ func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
-var errUsage = errors.New("usage")
+var (
+	errUsage = errors.New("usage")
+	// errPartial means some inputs were rejected but everything else was
+	// converted and written.
+	errPartial = errors.New("some files were rejected")
+)
+
+// Exit codes.
+const (
+	exitOK      = 0
+	exitFatal   = 1
+	exitUsage   = 2
+	exitPartial = 3
+)
 
 func run(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprint(stderr, usage)
-		return 2
+		args = []string{"gui"} // double-clicked: open the GUI
 	}
 	var err error
 	switch args[0] {
@@ -57,21 +75,26 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = learn(args[1:], stdout, stderr)
 	case "convert":
 		err = convert(args[1:], stdout, stderr)
+	case "gui":
+		err = gui(args[1:], stdout, stderr)
 	case "-h", "-help", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0
 	default:
 		fmt.Fprintf(stderr, "unknown command %q\n\n%s", args[0], usage)
-		return 2
+		return exitUsage
 	}
 	switch {
 	case err == nil, errors.Is(err, flag.ErrHelp):
-		return 0
+		return exitOK
 	case errors.Is(err, errUsage):
-		return 2
+		return exitUsage
+	case errors.Is(err, errPartial):
+		fmt.Fprintln(stderr, "flowtocsv:", err)
+		return exitPartial
 	default:
 		fmt.Fprintln(stderr, "flowtocsv:", err)
-		return 1
+		return exitFatal
 	}
 }
 
@@ -136,6 +159,7 @@ func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
 type input struct {
 	path, name, hash string
 	data             []byte
+	dups             []string                   // other paths with identical content
 	parsed           map[string]*flowtocsv.File // by delimiter; nil if it didn't parse
 }
 
@@ -151,7 +175,7 @@ func (in *input) parse(delim string) *flowtocsv.File {
 	return f
 }
 
-func convert(args []string, stdout, stderr io.Writer) error {
+func convert(args []string, stdout, stderr io.Writer) (err error) {
 	fs := flag.NewFlagSet("convert", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	var instr multiFlag
@@ -160,9 +184,44 @@ func convert(args []string, stdout, stderr io.Writer) error {
 	format := fs.String("format", "csv", "output format: csv or json")
 	statePath := fs.String("state", "", "state file recording converted files; inputs already in it are skipped")
 	outDir := fs.String("o", ".", "output directory")
+	archive := fs.String("archive", "", "move converted (and already-converted) input files here after the run")
+	rejected := fs.String("rejected", "", "move input files that failed to convert here after the run")
+	logPath := fs.String("log", "", "append a timestamped log of the run to this file")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	if *logPath != "" {
+		lf, openErr := os.OpenFile(*logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+		if openErr != nil {
+			return fmt.Errorf("opening log: %w", openErr)
+		}
+		defer lf.Close()
+		lw := &timestamped{w: lf}
+		stdout, stderr = io.MultiWriter(stdout, lw), io.MultiWriter(stderr, lw)
+		fmt.Fprintf(lw, "run started: %s\n", strings.Join(args, " "))
+		defer func() {
+			switch {
+			case err == nil:
+				fmt.Fprintln(lw, "run finished: ok")
+			default:
+				fmt.Fprintf(lw, "run finished: %v\n", err)
+			}
+		}()
+	}
+	return convertRun(convertOptions{
+		instructions: instr, inputs: fs.Args(), layout: *layout, format: *format,
+		statePath: *statePath, outDir: *outDir, archive: *archive, rejected: *rejected,
+	}, stdout, stderr)
+}
+
+type convertOptions struct {
+	instructions, inputs                                 []string
+	layout, format, statePath, outDir, archive, rejected string
+}
+
+func convertRun(o convertOptions, stdout, stderr io.Writer) error {
+	layout, format, statePath, outDir := &o.layout, &o.format, &o.statePath, &o.outDir
+	instr := o.instructions
 	switch {
 	case *format != "csv" && *format != "json":
 		fmt.Fprintf(stderr, "convert: unknown format %q\n", *format)
@@ -170,7 +229,7 @@ func convert(args []string, stdout, stderr io.Writer) error {
 	case *layout != string(flowtocsv.LayoutWide) && *layout != string(flowtocsv.LayoutTables):
 		fmt.Fprintf(stderr, "convert: unknown layout %q\n", *layout)
 		return errUsage
-	case len(instr) == 0 || fs.NArg() == 0:
+	case len(instr) == 0 || len(o.inputs) == 0:
 		fmt.Fprintln(stderr, "convert: need at least one -i and one input")
 		return errUsage
 	}
@@ -185,7 +244,7 @@ func convert(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 	}
-	inputs, err := readInputs(fs.Args(), st, stderr)
+	inputs, alreadyDone, err := readInputs(o.inputs, st, stderr)
 	if err != nil {
 		return err
 	}
@@ -193,30 +252,23 @@ func convert(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 
-	var failures int
 	claimed := map[*input]bool{}
+	failed := map[*input]bool{}
 	converted := map[string]stateEntry{}
 	for _, ins := range all {
-		tables := ins.EmptyTables(flowtocsv.Layout(*layout))
+		tables, results := convertInputs(&ins, flowtocsv.Layout(*layout), inputs)
 		files := 0
-		for _, inp := range inputs {
-			f := inp.parse(ins.Delimiter)
-			if f == nil || !ins.Matches(f) {
+		for _, r := range results {
+			if !r.matched {
 				continue
 			}
-			claimed[inp] = true
-			got, err := convertOne(&ins, f, inp.name, flowtocsv.Layout(*layout))
-			if err != nil {
-				fmt.Fprintf(stderr, "%s: %v\n", inp.path, err)
-				failures++
+			claimed[r.input] = true
+			if r.err != nil {
+				fmt.Fprintf(stderr, "%s: %v\n", r.input.path, r.err)
+				failed[r.input] = true
 				continue
 			}
-			for i, t := range got {
-				if err := tables[i].Append(t); err != nil {
-					return err
-				}
-			}
-			converted[inp.hash] = stateEntry{Name: inp.name, Flow: ins.Flow}
+			converted[r.input.hash] = stateEntry{Name: r.input.name, Flow: ins.Flow}
 			files++
 		}
 
@@ -242,10 +294,123 @@ func convert(args []string, stdout, stderr io.Writer) error {
 			return fmt.Errorf("output written but state not saved, so these files will be converted again next run: %w", err)
 		}
 	}
-	if failures > 0 {
-		return fmt.Errorf("%d file(s) failed to convert", failures)
+
+	// Output and state are safe on disk; now clear the inbox.
+	var toArchive, toReject []string
+	toArchive = append(toArchive, alreadyDone...)
+	for _, inp := range inputs {
+		switch {
+		case failed[inp]:
+			toReject = append(append(toReject, inp.path), inp.dups...)
+		case claimed[inp]:
+			toArchive = append(append(toArchive, inp.path), inp.dups...)
+		}
+	}
+	if err := moveAll(toArchive, o.archive, stdout); err != nil {
+		return err
+	}
+	if err := moveAll(toReject, o.rejected, stdout); err != nil {
+		return err
+	}
+
+	if len(failed) > 0 {
+		return fmt.Errorf("%w: %d failed to convert", errPartial, len(failed))
 	}
 	return nil
+}
+
+// moveAll moves files into dir (if dir is set), never overwriting: a name
+// already taken gets a numeric suffix.
+func moveAll(paths []string, dir string, log io.Writer) error {
+	if dir == "" || len(paths) == 0 {
+		return nil
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	for _, p := range paths {
+		dest, err := freeName(dir, filepath.Base(p))
+		if err != nil {
+			return err
+		}
+		if err := moveFile(p, dest); err != nil {
+			return fmt.Errorf("moving %s: %w", p, err)
+		}
+		fmt.Fprintf(log, "moved %s -> %s\n", p, dest)
+	}
+	return nil
+}
+
+func freeName(dir, name string) (string, error) {
+	ext := filepath.Ext(name)
+	stem := strings.TrimSuffix(name, ext)
+	for i := 0; i < 10000; i++ {
+		candidate := filepath.Join(dir, name)
+		if i > 0 {
+			candidate = filepath.Join(dir, fmt.Sprintf("%s.%d%s", stem, i, ext))
+		}
+		if _, err := os.Lstat(candidate); errors.Is(err, os.ErrNotExist) {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("no free name for %s in %s", name, dir)
+}
+
+// moveFile renames src to dest, falling back to copy-and-delete when they
+// are on different drives.
+func moveFile(src, dest string) error {
+	if err := os.Rename(src, dest); err == nil {
+		return nil
+	}
+	b, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	if err := writeFile(dest, func(w io.Writer) error { _, err := w.Write(b); return err }); err != nil {
+		return err
+	}
+	return os.Remove(src)
+}
+
+// timestamped prefixes every write (one log line) with the time.
+type timestamped struct{ w io.Writer }
+
+func (t *timestamped) Write(p []byte) (int, error) {
+	if _, err := fmt.Fprintf(t.w, "%s %s", time.Now().Format("2006-01-02 15:04:05"), p); err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+// fileResult is the outcome of converting one input with one instruction set.
+type fileResult struct {
+	input   *input
+	matched bool  // the input is an instance of the flow
+	err     error // conversion failed; the input contributed no rows
+}
+
+// convertInputs converts every input that matches ins into the layout's
+// tables, which are always returned (possibly without rows).
+func convertInputs(ins *flowtocsv.Instructions, layout flowtocsv.Layout, inputs []*input) ([]*flowtocsv.Table, []fileResult) {
+	tables := ins.EmptyTables(layout)
+	results := make([]fileResult, len(inputs))
+	for i, inp := range inputs {
+		results[i].input = inp
+		f := inp.parse(ins.Delimiter)
+		if f == nil || !ins.Matches(f) {
+			continue
+		}
+		results[i].matched = true
+		got, err := convertOne(ins, f, inp.name, layout)
+		if err != nil {
+			results[i].err = err
+			continue
+		}
+		for j, t := range got {
+			tables[j].Rows = append(tables[j].Rows, t.Rows...)
+		}
+	}
+	return tables, results
 }
 
 func convertOne(ins *flowtocsv.Instructions, f *flowtocsv.File, source string, layout flowtocsv.Layout) ([]*flowtocsv.Table, error) {
@@ -295,32 +460,46 @@ func readAllInstructions(paths []string) ([]flowtocsv.Instructions, error) {
 
 // readInputs reads every input, dropping files already recorded in st and
 // files whose content repeats an earlier input in this run.
-func readInputs(paths []string, st *state, stderr io.Writer) ([]*input, error) {
+// readInputs reads every input. Files already recorded in st are returned
+// separately as done. A file whose content repeats an earlier input in this
+// run is attached to that input (dups) and shares its fate.
+func readInputs(paths []string, st *state, stderr io.Writer) (inputs []*input, done []string, err error) {
 	files, err := expand(paths)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	seen := map[string]string{}
-	var inputs []*input
+	seen := map[string]*input{}
 	for _, p := range files {
 		b, err := os.ReadFile(p)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		sum := sha256.Sum256(b)
-		h := hex.EncodeToString(sum[:])
-		if prev, ok := st.Files[h]; ok {
+		inp := newInput(p, b)
+		if prev, ok := st.Files[inp.hash]; ok {
 			fmt.Fprintf(stderr, "%s: skipped, already converted as %s on %s\n", p, prev.Name, prev.Converted.Format("2006-01-02 15:04"))
+			done = append(done, p)
 			continue
 		}
-		if prev, ok := seen[h]; ok {
-			fmt.Fprintf(stderr, "%s: skipped, same content as %s\n", p, prev)
+		if prev, ok := seen[inp.hash]; ok {
+			fmt.Fprintf(stderr, "%s: skipped, same content as %s\n", p, prev.path)
+			prev.dups = append(prev.dups, p)
 			continue
 		}
-		seen[h] = p
-		inputs = append(inputs, &input{path: p, name: filepath.Base(p), hash: h, data: b, parsed: map[string]*flowtocsv.File{}})
+		seen[inp.hash] = inp
+		inputs = append(inputs, inp)
 	}
-	return inputs, nil
+	return inputs, done, nil
+}
+
+func newInput(path string, data []byte) *input {
+	sum := sha256.Sum256(data)
+	return &input{
+		path:   path,
+		name:   filepath.Base(path),
+		hash:   hex.EncodeToString(sum[:]),
+		data:   data,
+		parsed: map[string]*flowtocsv.File{},
+	}
 }
 
 // expand replaces directories with the regular files directly inside them.

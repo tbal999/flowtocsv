@@ -15,9 +15,48 @@ MIT licensed.
 
 ## Install
 
+Build from a checkout:
+
 ```sh
-go install github.com/tbal999/flowtocsv/cmd/flowtocsv@latest
+make build        # bin/flowtocsv (bin/flowtocsv.exe on Windows)
 ```
+
+`go install github.com/tbal999/flowtocsv/cmd@latest` also works, but Go
+names the binary after its folder, so you get `cmd`/`cmd.exe`. Rename it.
+
+To try it with sample data, see [examples/](examples/).
+
+## Two ways to run it
+
+- **GUI.** Double-click `flowtocsv.exe`, or run `flowtocsv` with no
+  arguments, and it opens in your browser. Learn flows, rename columns next
+  to sample values, set types and parents, then preview and download
+  conversions. It also builds the command line for unattended runs.
+- **Unattended, once.** `flowtocsv convert …` runs with no web page. It
+  converts the inbox, writes the output, moves the inputs, and exits with a
+  status code, for SSIS, Task Scheduler or cron. See [Daily runs](#daily-runs).
+
+The steps below use the command line. The GUI does the same things.
+
+## GUI
+
+```sh
+flowtocsv gui [-dir instructions] [-addr 127.0.0.1:8765] [-open=false]
+```
+
+It reads and saves instructions in `-dir`, the same folder the unattended run
+uses. The page is built into the binary and works offline. It only answers
+on localhost and refuses requests from other websites. Files you convert
+there are uploaded to the local process only.
+
+1. **Instructions:** learn from sample files, or open saved ones. Rename
+   columns (each shows a sample value), pick types and each group's parent,
+   then save.
+2. **Convert:** pick files and a layout. Preview every table with its keys
+   and see which files were skipped or failed. Download all tables as a zip
+   of CSV or JSON.
+3. **Automate:** fill in your folders and copy the exact `convert` command
+   for SSIS or a scheduler.
 
 ## Quick start
 
@@ -122,17 +161,41 @@ are. With `-format json`, each table also lists its `primary_key` and
 
 ## Daily runs
 
+`convert` is a run-once process with no web page, made for SSIS, Task
+Scheduler or cron:
+
 ```sh
-flowtocsv convert -state flowtocsv-state.json -layout tables -i instructions/ -o out/ incoming/
+flowtocsv convert -layout tables -i C:\flows\instructions -o C:\flows\out ^
+  -archive C:\flows\archive -rejected C:\flows\rejected ^
+  -state C:\flows\flowtocsv-state.json -log C:\flows\flowtocsv.log ^
+  C:\flows\inbox
 ```
 
-With `-state`, each converted file is recorded by its content hash. Later
-runs skip it, even if it's re-delivered under another name. Each run's
-output therefore holds only new data: load it into staging, then merge.
+| Flag | What it does |
+|---|---|
+| `-archive DIR` | Moves converted input files here, including re-deliveries of files already converted. A name that already exists gets a numeric suffix, so nothing is overwritten. |
+| `-rejected DIR` | Moves files that failed to convert here. The log says why. Files matching no instructions stay in the inbox. |
+| `-state FILE` | Records converted files by content hash and skips them later, even under a new name. A safety net on top of `-archive`. Failed files aren't recorded, so they are retried. |
+| `-log FILE` | Appends a timestamped log of each run. Console output is still printed too. |
 
-Files that fail to convert are not recorded and are retried next run. The
-state is saved only after all output is written. Load each run's output
-before the next run, because the next run replaces it.
+Order of work: convert, then write all output files, then save state, then
+move inputs. If a run dies partway, nothing is lost, and nothing gets loaded
+twice. Every flow's output files are rewritten on each run, header-only if
+nothing new arrived, so load each run's output before the next run.
+
+| Exit code | Meaning |
+|---|---|
+| `0` | Every matching file converted |
+| `3` | Some files were rejected (moved to `-rejected`). Everything else was converted and written. |
+| `1` | Fatal: bad instructions, unreadable folders, or output couldn't be written |
+| `2` | Bad command-line usage |
+
+**SSIS:** add an Execute Process Task, set `Executable` to `flowtocsv.exe`
+and `Arguments` to everything after it. It fails the task on any non-zero
+exit by default. To let partial runs continue, set `SuccessValue` to 0 and
+handle exit code 3 in a precedence constraint, or route the task's
+`StandardErrorVariable` to your alerting. Follow it with Flat File sources
+(UTF-8, code page 65001) reading the output folder.
 
 ## How rows are built
 
@@ -179,3 +242,5 @@ Docs: https://pkg.go.dev/github.com/tbal999/flowtocsv
 make check   # gofmt, go vet, go test
 make build   # bin/flowtocsv
 ```
+
+The CLI and GUI live in [cmd/](cmd/); the page is [cmd/gui/index.html](cmd/gui/index.html), embedded at build time.

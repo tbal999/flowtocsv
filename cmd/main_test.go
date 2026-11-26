@@ -166,8 +166,8 @@ func TestStateDoesNotRecordFailures(t *testing.T) {
 	state := filepath.Join(dir, "state.json")
 	bad := filepath.Join(dir, "in", "bad.txt")
 	writeT(t, bad, strings.Replace(sample, "08A|x|", "999|?|", 1))
-	if code, _, _ := runT(t, "convert", "-state", state, "-i", instr, "-o", filepath.Join(dir, "out"), bad); code != 1 {
-		t.Fatalf("exit %d, want 1", code)
+	if code, _, _ := runT(t, "convert", "-state", state, "-i", instr, "-o", filepath.Join(dir, "out"), bad); code != exitPartial {
+		t.Fatalf("exit %d, want 3", code)
 	}
 	if _, err := os.Stat(state); err == nil {
 		t.Error("state written although nothing converted")
@@ -192,8 +192,8 @@ func TestConvertReportsBadFile(t *testing.T) {
 	writeT(t, filepath.Join(dir, "good.txt"), sample)
 	code, stdout, stderr := runT(t, "convert", "-i", instr, "-o", filepath.Join(dir, "out"),
 		filepath.Join(dir, "bad.txt"), filepath.Join(dir, "good.txt"))
-	if code != 1 {
-		t.Errorf("exit = %d, want 1", code)
+	if code != exitPartial {
+		t.Errorf("exit = %d, want 3", code)
 	}
 	if !strings.Contains(stderr, `bad.txt: line 8: group "999"`) || !strings.Contains(stdout, "1 files") || !strings.Contains(stdout, "(3 rows)") {
 		t.Errorf("stdout %q\nstderr %q", stdout, stderr)
@@ -202,7 +202,7 @@ func TestConvertReportsBadFile(t *testing.T) {
 
 func TestUsageErrors(t *testing.T) {
 	for _, args := range [][]string{
-		nil, {"nope"}, {"learn"}, {"convert"},
+		{"nope"}, {"learn"}, {"convert"},
 		{"convert", "-format", "xml", "-i", "x", "y"},
 		{"convert", "-layout", "star", "-i", "x", "y"},
 	} {
