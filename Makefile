@@ -1,11 +1,13 @@
-.ONESHELL:
-.PHONY: test
+.PHONY: check test vet build
+
+check: vet test
 
 test:
-	go test -v -cover ./...
+	go test -cover ./...
 
-lint:
-	@command -v golangci-lint > /dev/null || \
-		GO111MODULE=off go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+vet:
+	go vet ./...
+	@test -z "$$(gofmt -l .)" || { gofmt -l .; echo "files above need gofmt"; exit 1; }
 
-	golangci-lint run
+build:
+	go build -o bin/ ./cmd/flowtocsv
